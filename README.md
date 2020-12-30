@@ -16,3 +16,16 @@ This is an example of installation using [vim-plug](https://github.com/junegunn/
 Plug 'rbtnn/vim-near'
 ```
 
+## Commands
+### :Near
+Open a near window.
+
+## Variables
+### g:near\_ignoredirs
+This contains ignored directory names.
+This default is `['node_modules', '.git', '.svn', '_svn']`.
+
+### g:near\_maxdepth
+This is the maxdepth.
+This default is `2`.
+
