@@ -58,14 +58,20 @@ endfunction
 function! s:readfiles(path, depth) abort
 	let xs = []
 	if 0 < a:depth
-		for name in readdir(a:path)
-			let relpath = expand(a:path .. '/' .. name)
-			if filereadable(relpath)
-				let xs += [relpath]
-			elseif isdirectory(relpath) && (-1 == index(g:near_ignoredirs, name))
-				let xs += s:readfiles(relpath, a:depth - 1)
-			endif
-		endfor
+		try
+			for name in readdir(a:path)
+				let relpath = fnamemodify(a:path .. '/' .. name, ':.')
+				if filereadable(relpath)
+					let xs += [relpath]
+				elseif isdirectory(relpath) && (-1 == index(g:near_ignoredirs, name))
+					let xs += s:readfiles(relpath, a:depth - 1)
+				endif
+			endfor
+		catch
+			echohl Error
+			echo v:exception
+			echohl None
+		endtry
 	endif
 	return xs
 endfunction
