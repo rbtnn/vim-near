@@ -10,7 +10,7 @@ augroup near
 augroup END
 
 let g:near_ignoredirs = get(g:, 'near_ignoredirs', ['node_modules', '.git', '.svn', '_svn'])
-let g:near_maxdepth = get(g:, 'near_depth', 2)
+let g:near_maxdepth = get(g:, 'near_maxdepth', 2)
 
 function! s:near() abort
 	if &filetype != 'near'
