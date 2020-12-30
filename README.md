@@ -30,4 +30,4 @@ This is the maxdepth.
 This default is `2`.
 
 ## Requirements
-* `readdir()`
+* `readdir()` (vim: v8.1.1120, neovim: v0.4.0)
