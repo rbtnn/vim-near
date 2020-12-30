@@ -35,22 +35,21 @@ function! s:try_close() abort
 	if get(t:near, 'near_winid', -1) == win_getid()
 		close
 		execute printf('%dwincmd w', win_id2win(t:near['prev_winid']))
-		let t:near['near_winid'] = -1
 	endif
+	" Because WinEnter event is not emited when Ctrl-w_c in a near window.
+	call s:restore_view()
 endfunction
 
 function! s:restore_view() abort
 	let t:near = get(t:, 'near', {})
-	if get(t:near, 'prev_winid', -1) == win_getid()
+	if (get(t:near, 'prev_winid', -1) == win_getid()) && !empty(get(t:near, 'prev_view', {}))
 		call winrestview(get(t:near, 'prev_view', {}))
-		let t:near['prev_winid'] = -1
-		let t:near['prev_view'] = {}
 	endif
 endfunction
 
 function! s:open(line) abort
 	let t:near = get(t:, 'near', {})
-	if get(t:near, 'near_winid', -1) == win_getid()
+	if (get(t:near, 'near_winid', -1) == win_getid()) && filereadable(a:line)
 		call s:try_close()
 		execute printf('edit %s', escape(a:line, '\ '))
 	endif

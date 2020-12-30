@@ -29,3 +29,5 @@ This default is `['node_modules', '.git', '.svn', '_svn']`.
 This is the maxdepth.
 This default is `2`.
 
+## Requirements
+* `readdir()`
