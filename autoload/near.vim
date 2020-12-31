@@ -52,6 +52,9 @@ function! near#run_tests() abort
 		endif
 		let v:errors = []
 		set wildignore=*.gif
+		if has('nvim')
+			set wildignore+=.nvimlog
+		endif
 
 		call assert_equal(
 			\ s:readdir_rec('.', '.', 0),
