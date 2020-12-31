@@ -67,7 +67,7 @@ function! near#run_tests() abort
 			\ ['.github/workflows/', 'LICENSE', 'README.md', 'autoload/near.vim', 'plugin/near.vim', 'syntax/near.vim'])
 		call assert_equal(
 			\ s:readdir_rec('.', '.', 3),
-			\ ['.github/workflows/vim.yml', 'LICENSE', 'README.md', 'autoload/near.vim', 'plugin/near.vim', 'syntax/near.vim'])
+			\ ['.github/workflows/neovim.yml', '.github/workflows/vim.yml', 'LICENSE', 'README.md', 'autoload/near.vim', 'plugin/near.vim', 'syntax/near.vim'])
 		call assert_equal(
 			\ s:readdir_rec('./plugin', './plugin', 0),
 			\ [])
@@ -94,7 +94,7 @@ function! near#run_tests() abort
 			\ ['workflows/'])
 		call assert_equal(
 			\ s:readdir_rec('./.github', './.github', 2),
-			\ ['workflows/vim.yml'])
+			\ ['workflows/neovim.yml', 'workflows/vim.yml'])
 
 		if !empty(v:errors)
 			call writefile(v:errors, s:TEST_LOG)
