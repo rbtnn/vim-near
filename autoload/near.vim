@@ -1,7 +1,7 @@
 
 let s:TEST_LOG = expand('<sfile>:h:h:gs?\?/?') . '/test.log'
 
-let g:near_ignoredirs = get(g:, 'near_ignoredirs', ['node_modules', '.git', '.svn', '_svn', '.dotnet'])
+let g:near_ignoredirs = get(g:, 'near_ignoredirs', ['node_modules', '.git', '.svn', '_svn'])
 let g:near_maxdepth = get(g:, 'near_maxdepth', 2)
 
 function! near#exec(q_args) abort
@@ -45,57 +45,65 @@ function! near#restore_view() abort
 endfunction
 
 function! near#run_tests() abort
-	if filereadable(s:TEST_LOG)
-		call delete(s:TEST_LOG)
-	endif
-	let v:errors = []
-	call assert_equal(
-		\ s:readdir_rec('.', '.', 0),
-		\ [])
-	call assert_equal(
-		\ s:readdir_rec('.', '.', 1),
-		\ ['.github/', 'LICENSE', 'README.md', 'autoload/', 'plugin/', 'syntax/'])
-	call assert_equal(
-		\ s:readdir_rec('.', '.', 2),
-		\ ['.github/workflows/', 'LICENSE', 'README.md', 'autoload/near.vim', 'plugin/near.vim', 'syntax/near.vim'])
-	call assert_equal(
-		\ s:readdir_rec('.', '.', 3),
-		\ ['.github/workflows/vim.yml', 'LICENSE', 'README.md', 'autoload/near.vim', 'plugin/near.vim', 'syntax/near.vim'])
-	call assert_equal(
-		\ s:readdir_rec('./plugin', './plugin', 0),
-		\ [])
-	call assert_equal(
-		\ s:readdir_rec('./plugin', './plugin', 1),
-		\ ['near.vim'])
-	call assert_equal(
-		\ s:readdir_rec('./plugin', './plugin', 2),
-		\ ['near.vim'])
-	call assert_equal(
-		\ s:readdir_rec('./syntax', './syntax', 0),
-		\ [])
-	call assert_equal(
-		\ s:readdir_rec('./syntax', './syntax', 1),
-		\ ['near.vim'])
-	call assert_equal(
-		\ s:readdir_rec('./syntax', './syntax', 2),
-		\ ['near.vim'])
-	call assert_equal(
-		\ s:readdir_rec('./.github', './.github', 0),
-		\ [])
-	call assert_equal(
-		\ s:readdir_rec('./.github', './.github', 1),
-		\ ['workflows/'])
-	call assert_equal(
-		\ s:readdir_rec('./.github', './.github', 2),
-		\ ['workflows/vim.yml'])
-	if !empty(v:errors)
-		call writefile(v:errors, s:TEST_LOG)
-		for err in v:errors
-			echohl Error
-			echo err
-			echohl None
-		endfor
-	endif
+	let saved_wildignore = &wildignore
+	try
+		if filereadable(s:TEST_LOG)
+			call delete(s:TEST_LOG)
+		endif
+		let v:errors = []
+		set wildignore=*.gif
+
+		call assert_equal(
+			\ s:readdir_rec('.', '.', 0),
+			\ [])
+		call assert_equal(
+			\ s:readdir_rec('.', '.', 1),
+			\ ['.github/', 'LICENSE', 'README.md', 'autoload/', 'plugin/', 'syntax/'])
+		call assert_equal(
+			\ s:readdir_rec('.', '.', 2),
+			\ ['.github/workflows/', 'LICENSE', 'README.md', 'autoload/near.vim', 'plugin/near.vim', 'syntax/near.vim'])
+		call assert_equal(
+			\ s:readdir_rec('.', '.', 3),
+			\ ['.github/workflows/vim.yml', 'LICENSE', 'README.md', 'autoload/near.vim', 'plugin/near.vim', 'syntax/near.vim'])
+		call assert_equal(
+			\ s:readdir_rec('./plugin', './plugin', 0),
+			\ [])
+		call assert_equal(
+			\ s:readdir_rec('./plugin', './plugin', 1),
+			\ ['near.vim'])
+		call assert_equal(
+			\ s:readdir_rec('./plugin', './plugin', 2),
+			\ ['near.vim'])
+		call assert_equal(
+			\ s:readdir_rec('./syntax', './syntax', 0),
+			\ [])
+		call assert_equal(
+			\ s:readdir_rec('./syntax', './syntax', 1),
+			\ ['near.vim'])
+		call assert_equal(
+			\ s:readdir_rec('./syntax', './syntax', 2),
+			\ ['near.vim'])
+		call assert_equal(
+			\ s:readdir_rec('./.github', './.github', 0),
+			\ [])
+		call assert_equal(
+			\ s:readdir_rec('./.github', './.github', 1),
+			\ ['workflows/'])
+		call assert_equal(
+			\ s:readdir_rec('./.github', './.github', 2),
+			\ ['workflows/vim.yml'])
+
+		if !empty(v:errors)
+			call writefile(v:errors, s:TEST_LOG)
+			for err in v:errors
+				echohl Error
+				echo err
+				echohl None
+			endfor
+		endif
+	finally
+		let &wildignore = saved_wildignore
+	endtry
 endfunction
 
 
