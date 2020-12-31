@@ -17,8 +17,8 @@ Plug 'rbtnn/vim-near'
 ```
 
 ## Commands
-### :Near
-Open a near window.
+### :Near [{directory}]
+Open a near window at {directory}. If {directory} is omited or invalid, use current directory.
 
 ## Variables
 ### g:near\_ignoredirs
@@ -30,4 +30,4 @@ This is the maxdepth.
 This default is `2`.
 
 ## Requirements
-* `readdir()` (vim: v8.1.1120, neovim: v0.4.0)
+* `readdir()`
