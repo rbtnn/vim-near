@@ -19,7 +19,7 @@ Plug 'rbtnn/vim-near'
 
 ## Commands
 ### :Near [{directory}]
-Open a near window at {directory}. If {directory} is omited or invalid, use current directory.
+Open/Close a near window at {directory}. If {directory} is omited or invalid, use current directory.
 
 ## Variables
 ### g:near\_ignoredirs
