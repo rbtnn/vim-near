@@ -33,7 +33,7 @@ function! near#open(q_args) abort
 endfunction
 
 function! near#close() abort
-	call s:construct_or_init()
+	call s:construct_or_init(v:false)
 	if (t:near['near_winid'] == win_getid()) && (&filetype == s:FILETYPE)
 		close
 		if (0 < win_id2win(t:near['prev_winid'])) && !empty(t:near['prev_view'])
@@ -108,7 +108,7 @@ function! near#run_tests() abort
 endfunction
 
 function! near#select_file(line) abort
-	call s:construct_or_init()
+	call s:construct_or_init(v:false)
 	if (t:near['near_winid'] == win_getid()) && (&filetype == s:FILETYPE)
 		let path = s:fix_path(t:near['rootdir'] .. '/' .. a:line)
 		if filereadable(path)
@@ -132,7 +132,7 @@ function! s:error(text) abort
 	echohl None
 endfunction
 
-function! s:construct_or_init(force_init = v:false) abort
+function! s:construct_or_init(force_init) abort
 	if a:force_init
 		let t:near = {}
 	else
