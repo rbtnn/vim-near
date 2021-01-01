@@ -148,6 +148,22 @@ function! s:fix_path(path) abort
 	return substitute(a:path, '[\/]\+', '/', 'g')
 endfunction
 
+function! s:readdir(path) abort
+	if exists('*readdir')
+		return readdir(a:path)
+	else
+		let saved = getcwd()
+		try
+			lcd `=a:path`
+			let xs = split(glob('.*') .. "\n" .. glob('*'), "\n")
+			call filter(xs, { _,x -> (x != '.') && (x != '..') })
+			return xs
+		finally
+			lcd `=saved`
+		endtry
+	endif
+endfunction
+
 function! s:readdir_rec(rootdir, path, depth) abort
 	let xs = []
 	if 0 < a:depth
@@ -157,7 +173,7 @@ function! s:readdir_rec(rootdir, path, depth) abort
 		endif
 		let names = []
 		try
-			let names = readdir(a:path)
+			let names = s:readdir(a:path)
 		catch /^Vim\%((\a\+)\)\=:E484:/
 			" skip the directory.
 			" E484: Can't open file ...
