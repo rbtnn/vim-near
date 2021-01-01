@@ -1,34 +1,40 @@
 
 let s:TEST_LOG = expand('<sfile>:h:h:gs?\?/?') . '/test.log'
+let s:FILETYPE = 'near'
 
 let g:near_ignoredirs = get(g:, 'near_ignoredirs', ['node_modules', '.git', '.svn', '_svn'])
 let g:near_maxdepth = get(g:, 'near_maxdepth', 2)
 
 function! near#open(q_args) abort
-	if &filetype == 'near'
-		call near#close()
-	endif
 	let rootdir = s:fix_path(isdirectory(expand(a:q_args)) ? expand(a:q_args) : getcwd())
-	let t:near = {
-		\ 'prev_view' : winsaveview(),
-		\ 'prev_winid' : win_getid(),
-		\ 'rootdir' : rootdir,
-		\ }
-	rightbelow vnew
-	let t:near['near_winid'] = win_getid()
-	setlocal noreadonly modified
 	let lines = s:readdir_rec(rootdir, rootdir, g:near_maxdepth)
-	silent! call deletebufline('%', 1, '$')
-	call setbufline('%', 1, lines)
-	let width = max(map(copy(lines), { _,x -> strdisplaywidth(x) })) + 1
-	execute printf('vertical resize %d', width)
-	setlocal buftype=nofile readonly nomodified nobuflisted filetype=near
-	let &l:statusline = printf('[near] %s', rootdir)
+	if !empty(lines)
+		if &filetype == s:FILETYPE
+			call near#close()
+		endif
+		let t:near = {
+			\ 'prev_view' : winsaveview(),
+			\ 'prev_winid' : win_getid(),
+			\ 'rootdir' : rootdir,
+			\ }
+		rightbelow vnew
+		let t:near['near_winid'] = win_getid()
+		setlocal noreadonly modified
+		silent! call deletebufline('%', 1, '$')
+		call setbufline('%', 1, lines)
+		let width = max(map(copy(lines), { _,x -> strdisplaywidth(x) })) + 1
+		execute printf('vertical resize %d', width)
+		setlocal buftype=nofile readonly nomodified nobuflisted
+		let &l:filetype = s:FILETYPE
+		let &l:statusline = printf('[%s] %s', s:FILETYPE, rootdir)
+	else
+		call s:error(printf('There are no files or directories in "%s".', rootdir))
+	endif
 endfunction
 
 function! near#close() abort
 	call s:construct_or_init()
-	if t:near['near_winid'] == win_getid()
+	if (t:near['near_winid'] == win_getid()) && (&filetype == s:FILETYPE)
 		close
 		if (0 < win_id2win(t:near['prev_winid'])) && !empty(t:near['prev_view'])
 			execute printf('%dwincmd w', win_id2win(t:near['prev_winid']))
@@ -93,9 +99,7 @@ function! near#run_tests() abort
 		if !empty(v:errors)
 			call writefile(v:errors, s:TEST_LOG)
 			for err in v:errors
-				echohl Error
-				echo err
-				echohl None
+				call s:error(err)
 			endfor
 		endif
 	finally
@@ -105,7 +109,7 @@ endfunction
 
 function! near#select_file(line) abort
 	call s:construct_or_init()
-	if (t:near['near_winid'] == win_getid())
+	if (t:near['near_winid'] == win_getid()) && (&filetype == s:FILETYPE)
 		let path = s:fix_path(t:near['rootdir'] .. '/' .. a:line)
 		if filereadable(path)
 			call near#close()
@@ -121,6 +125,12 @@ function! near#select_file(line) abort
 endfunction
 
 
+
+function! s:error(text) abort
+	echohl Error
+	echo a:text
+	echohl None
+endfunction
 
 function! s:construct_or_init(force_init = v:false) abort
 	if a:force_init
@@ -170,9 +180,7 @@ function! s:readdir_rec(rootdir, path, depth) abort
 				endif
 			endfor
 		catch
-			echohl Error
-			echo v:exception
-			echohl None
+			call s:error(v:exception)
 		endtry
 	endif
 	return xs
