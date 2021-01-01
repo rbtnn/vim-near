@@ -155,33 +155,36 @@ function! s:readdir_rec(rootdir, path, depth) abort
 		if !empty(rootdir) && ('/' != split(rootdir, '\zs')[-1])
 			let rootdir = rootdir .. '/'
 		endif
+		let names = []
 		try
-			for name in readdir(a:path)
-				let relpath = s:fix_path(a:path .. '/' .. name)
-				if empty(expand(relpath))
-					continue
-				endif
-				if filereadable(relpath)
-					if rootdir == relpath[:len(rootdir) - 1]
-						let xs += [relpath[len(rootdir):]]
-					else
-						let xs += [relpath]
-					endif
-				elseif isdirectory(relpath) && (-1 == index(g:near_ignoredirs, name))
-					if 0 < a:depth - 1
-						let xs += s:readdir_rec(rootdir, relpath, a:depth - 1)
-					else
-						if rootdir == relpath[:len(rootdir) - 1]
-							let xs += [relpath[len(rootdir):] .. '/']
-						else
-							let xs += [relpath .. '/']
-						endif
-					endif
-				endif
-			endfor
-		catch
-			call s:error(v:exception)
+			let names = readdir(a:path)
+		catch /^Vim\%((\a\+)\)\=:E484:/
+			" skip the directory.
+			" E484: Can't open file ...
 		endtry
+		for name in names
+			let relpath = s:fix_path(a:path .. '/' .. name)
+			if empty(expand(relpath))
+				continue
+			endif
+			if filereadable(relpath)
+				if rootdir == relpath[:len(rootdir) - 1]
+					let xs += [relpath[len(rootdir):]]
+				else
+					let xs += [relpath]
+				endif
+			elseif isdirectory(relpath) && (-1 == index(g:near_ignoredirs, name))
+				if 0 < a:depth - 1
+					let xs += s:readdir_rec(rootdir, relpath, a:depth - 1)
+				else
+					if rootdir == relpath[:len(rootdir) - 1]
+						let xs += [relpath[len(rootdir):] .. '/']
+					else
+						let xs += [relpath .. '/']
+					endif
+				endif
+			endif
+		endfor
 	endif
 	return xs
 endfunction
