@@ -1,11 +1,13 @@
 
 let g:loaded_near = 1
 
-command! -complete=dir -nargs=* Near :call near#toggle(<q-args>)
+command! -complete=dir -nargs=* Near :call near#open(<q-args>)
 
 augroup near
 	autocmd!
 	autocmd WinLeave *     :call near#close()
-	autocmd WinEnter *     :call near#restore_view()
+	autocmd FileType near  :nnoremap <buffer><silent><cr>      :<C-u>call near#select_file(getline('.'))<cr>
+	autocmd FileType near  :nnoremap <buffer><silent><space>   :<C-u>call near#select_file(getline('.'))<cr>
+	autocmd FileType near  :nnoremap <buffer><silent><C-w>c    :<C-u>call near#close()<cr>
 augroup END
 

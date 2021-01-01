@@ -4,14 +4,6 @@ let s:TEST_LOG = expand('<sfile>:h:h:gs?\?/?') . '/test.log'
 let g:near_ignoredirs = get(g:, 'near_ignoredirs', ['node_modules', '.git', '.svn', '_svn'])
 let g:near_maxdepth = get(g:, 'near_maxdepth', 2)
 
-function! near#toggle(q_args) abort
-	if &filetype == 'near'
-		call near#close()
-	else
-		call near#open(a:q_args)
-	endif
-endfunction
-
 function! near#open(q_args) abort
 	if &filetype == 'near'
 		call near#close()
@@ -32,23 +24,17 @@ function! near#open(q_args) abort
 	execute printf('vertical resize %d', width)
 	setlocal buftype=nofile readonly nomodified nobuflisted filetype=near
 	let &l:statusline = printf('[near] %s', rootdir)
-	nnoremap <buffer><silent><cr>   :<C-u>call near#select_file(getline('.'))<cr>
 endfunction
 
 function! near#close() abort
-	let t:near = get(t:, 'near', {})
-	if get(t:near, 'near_winid', -1) == win_getid()
+	call s:construct_or_init()
+	if t:near['near_winid'] == win_getid()
 		close
-		execute printf('%dwincmd w', win_id2win(t:near['prev_winid']))
-	endif
-	" Because WinEnter event is not emited when Ctrl-w_c in a near window.
-	call near#restore_view()
-endfunction
-
-function! near#restore_view() abort
-	let t:near = get(t:, 'near', {})
-	if (get(t:near, 'prev_winid', -1) == win_getid()) && !empty(get(t:near, 'prev_view', {}))
-		call winrestview(get(t:near, 'prev_view', {}))
+		if (0 < win_id2win(t:near['prev_winid'])) && !empty(t:near['prev_view'])
+			execute printf('%dwincmd w', win_id2win(t:near['prev_winid']))
+			call winrestview(t:near['prev_view'])
+		endif
+		call s:construct_or_init(v:true)
 	endif
 endfunction
 
@@ -118,8 +104,8 @@ function! near#run_tests() abort
 endfunction
 
 function! near#select_file(line) abort
-	let t:near = get(t:, 'near', {})
-	if (get(t:near, 'near_winid', -1) == win_getid())
+	call s:construct_or_init()
+	if (t:near['near_winid'] == win_getid())
 		let path = s:fix_path(t:near['rootdir'] .. '/' .. a:line)
 		if filereadable(path)
 			call near#close()
@@ -135,6 +121,18 @@ function! near#select_file(line) abort
 endfunction
 
 
+
+function! s:construct_or_init(force_init = v:false) abort
+	if a:force_init
+		let t:near = {}
+	else
+		let t:near = get(t:, 'near', {})
+	endif
+	let t:near['near_winid'] = get(t:near, 'near_winid', -1)
+	let t:near['prev_view'] = get(t:near, 'prev_view', {})
+	let t:near['prev_winid'] = get(t:near, 'prev_winid', -1)
+	let t:near['rootdir'] = get(t:near, 'rootdir', '')
+endfunction
 
 function! s:fix_path(path) abort
 	return substitute(a:path, '[\/]\+', '/', 'g')
