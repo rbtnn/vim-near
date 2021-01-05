@@ -22,9 +22,9 @@ Plug 'rbtnn/vim-near'
 Open/Close a near window at {directory}. If {directory} is omited or invalid, use current directory.
 
 ## Variables
-### g:near\_ignoredirs
+### g:near\_ignore
 This contains ignored directory names.
-This default is `['node_modules', '.git', '.svn', '_svn']`.
+This default is `['node_modules', '.git', '.svn', '_svn', '.dotnet', 'desktop.ini']`.
 
 ### g:near\_maxdepth
 This is the maxdepth.

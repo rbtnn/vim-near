@@ -2,7 +2,7 @@
 let s:TEST_LOG = expand('<sfile>:h:h:gs?\?/?') . '/test.log'
 let s:FILETYPE = 'near'
 
-let g:near_ignoredirs = get(g:, 'near_ignoredirs', ['node_modules', '.git', '.svn', '_svn'])
+let g:near_ignore = get(g:, 'near_ignore', ['node_modules', '.git', '.svn', '_svn', '.dotnet', 'desktop.ini'])
 let g:near_maxdepth = get(g:, 'near_maxdepth', 2)
 
 function! near#open(q_args) abort
@@ -57,44 +57,44 @@ function! near#run_tests() abort
 		endif
 
 		call assert_equal(
-			\ sort(s:readdir_rec('.', '.', 0)),
-			\ sort([]))
+			\ sort([]),
+			\ sort(s:readdir_rec('.', '.', 0)))
 		call assert_equal(
-			\ sort(s:readdir_rec('.', '.', 1)),
-			\ sort(['.github/', 'LICENSE', 'README.md', 'autoload/', 'plugin/', 'syntax/']))
+			\ sort(['.github/', 'LICENSE', 'README.md', 'autoload/', 'plugin/', 'syntax/']),
+			\ sort(s:readdir_rec('.', '.', 1)))
 		call assert_equal(
-			\ sort(s:readdir_rec('.', '.', 2)),
-			\ sort(['.github/workflows/', 'LICENSE', 'README.md', 'autoload/near.vim', 'plugin/near.vim', 'syntax/near.vim']))
+			\ sort(['.github/', '.github/workflows/', 'LICENSE', 'README.md', 'autoload/', 'autoload/near.vim', 'plugin/', 'plugin/near.vim', 'syntax/', 'syntax/near.vim']),
+			\ sort(s:readdir_rec('.', '.', 2)))
 		call assert_equal(
-			\ sort(s:readdir_rec('.', '.', 3)),
-			\ sort(['.github/workflows/neovim.yml', '.github/workflows/vim.yml', 'LICENSE', 'README.md', 'autoload/near.vim', 'plugin/near.vim', 'syntax/near.vim']))
+			\ sort(['.github/', '.github/workflows/', '.github/workflows/neovim.yml', '.github/workflows/vim.yml', 'LICENSE', 'README.md', 'autoload/', 'autoload/near.vim', 'plugin/', 'plugin/near.vim', 'syntax/', 'syntax/near.vim']),
+			\ sort(s:readdir_rec('.', '.', 3)))
 		call assert_equal(
-			\ sort(s:readdir_rec('./plugin', './plugin', 0)),
-			\ sort([]))
+			\ sort([]),
+			\ sort(s:readdir_rec('./plugin', './plugin', 0)))
 		call assert_equal(
-			\ sort(s:readdir_rec('./plugin', './plugin', 1)),
-			\ sort(['near.vim']))
+			\ sort(['near.vim']),
+			\ sort(s:readdir_rec('./plugin', './plugin', 1)))
 		call assert_equal(
-			\ sort(s:readdir_rec('./plugin', './plugin', 2)),
-			\ sort(['near.vim']))
+			\ sort(['near.vim']),
+			\ sort(s:readdir_rec('./plugin', './plugin', 2)))
 		call assert_equal(
-			\ sort(s:readdir_rec('./syntax', './syntax', 0)),
-			\ sort([]))
+			\ sort([]),
+			\ sort(s:readdir_rec('./syntax', './syntax', 0)))
 		call assert_equal(
-			\ sort(s:readdir_rec('./syntax', './syntax', 1)),
-			\ sort(['near.vim']))
+			\ sort(['near.vim']),
+			\ sort(s:readdir_rec('./syntax', './syntax', 1)))
 		call assert_equal(
-			\ sort(s:readdir_rec('./syntax', './syntax', 2)),
-			\ sort(['near.vim']))
+			\ sort(['near.vim']),
+			\ sort(s:readdir_rec('./syntax', './syntax', 2)))
 		call assert_equal(
-			\ sort(s:readdir_rec('./.github', './.github', 0)),
-			\ sort([]))
+			\ sort([]),
+			\ sort(s:readdir_rec('./.github', './.github', 0)))
 		call assert_equal(
-			\ sort(s:readdir_rec('./.github', './.github', 1)),
-			\ sort(['workflows/']))
+			\ sort(['workflows/']),
+			\ sort(s:readdir_rec('./.github', './.github', 1)))
 		call assert_equal(
-			\ sort(s:readdir_rec('./.github', './.github', 2)),
-			\ sort(['workflows/neovim.yml', 'workflows/vim.yml']))
+			\ sort(['workflows/', 'workflows/neovim.yml', 'workflows/vim.yml']),
+			\ sort(s:readdir_rec('./.github', './.github', 2)))
 
 		if !empty(v:errors)
 			call writefile(v:errors, s:TEST_LOG)
@@ -183,20 +183,21 @@ function! s:readdir_rec(rootdir, path, depth) abort
 			if empty(expand(relpath))
 				continue
 			endif
-			if filereadable(relpath)
-				if rootdir == relpath[:len(rootdir) - 1]
-					let xs += [relpath[len(rootdir):]]
-				else
-					let xs += [relpath]
-				endif
-			elseif isdirectory(relpath) && (-1 == index(g:near_ignoredirs, name))
-				if 0 < a:depth - 1
-					let xs += s:readdir_rec(rootdir, relpath, a:depth - 1)
-				else
+			if -1 == index(g:near_ignore, name)
+				if filereadable(relpath)
+					if rootdir == relpath[:len(rootdir) - 1]
+						let xs += [relpath[len(rootdir):]]
+					else
+						let xs += [relpath]
+					endif
+				elseif isdirectory(relpath)
 					if rootdir == relpath[:len(rootdir) - 1]
 						let xs += [relpath[len(rootdir):] .. '/']
 					else
 						let xs += [relpath .. '/']
+					endif
+					if 0 < a:depth - 1
+						let xs += s:readdir_rec(rootdir, relpath, a:depth - 1)
 					endif
 				endif
 			endif
