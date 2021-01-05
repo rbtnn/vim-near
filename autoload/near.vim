@@ -3,11 +3,14 @@ let s:TEST_LOG = expand('<sfile>:h:h:gs?\?/?') . '/test.log'
 let s:FILETYPE = 'near'
 
 let g:near_ignore = get(g:, 'near_ignore', ['node_modules', '.git', '.svn', '_svn', '.dotnet', 'desktop.ini'])
-let g:near_maxdepth = get(g:, 'near_maxdepth', 2)
 
-function! near#open(q_args) abort
+function! near#open(q_args, ...) abort
 	let rootdir = s:fix_path(isdirectory(expand(a:q_args)) ? expand(a:q_args) : getcwd())
-	let lines = s:readdir_rec(rootdir, rootdir, g:near_maxdepth)
+	let depth = get(a:000, 0, 1)
+	if depth <= 0
+		let depth = 1
+	endif
+	let lines = s:readdir_rec(rootdir, rootdir, depth)
 	if !empty(lines)
 		if &filetype == s:FILETYPE
 			call near#close()
