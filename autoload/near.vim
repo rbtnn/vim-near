@@ -20,7 +20,7 @@ function! near#open(q_args, ...) abort
 			\ 'prev_winid' : win_getid(),
 			\ 'rootdir' : rootdir,
 			\ }
-		rightbelow vnew
+		vnew
 		let t:near['near_winid'] = win_getid()
 		setlocal noreadonly modified
 		silent! call deletebufline('%', 1, '$')
