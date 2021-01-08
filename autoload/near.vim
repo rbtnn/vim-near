@@ -2,7 +2,10 @@
 let s:TEST_LOG = expand('<sfile>:h:h:gs?\?/?') . '/test.log'
 let s:FILETYPE = 'near'
 
-let g:near_ignore = get(g:, 'near_ignore', ['node_modules', '.git', '.svn', '_svn', '.dotnet', 'desktop.ini'])
+let g:near_ignore = get(g:, 'near_ignore', [
+	\ 'node_modules', '.git', '.svn', '_svn', '.dotnet', 'desktop.ini',
+	\ '$RECYCLE.BIN', 'System Volume Information', 'Thumbs.db',
+	\ ])
 
 function! near#open(q_args, ...) abort
 	let rootdir = s:fix_path(isdirectory(expand(a:q_args)) ? expand(a:q_args) : getcwd())
@@ -193,7 +196,7 @@ function! s:readdir_rec(rootdir, path, depth) abort
 					else
 						let xs += [relpath]
 					endif
-				elseif isdirectory(relpath)
+				elseif isdirectory(relpath) && ('^rwxrwxrwx$' =~# getfperm(relpath))
 					if rootdir == relpath[:len(rootdir) - 1]
 						let xs += [relpath[len(rootdir):] .. '/']
 					else
