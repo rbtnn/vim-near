@@ -25,5 +25,5 @@ Open/Close a near window at {directory}. If {directory} is omited or invalid, us
 ## Variables
 ### g:near\_ignore
 This contains ignored directory names.
-This default is `['node_modules', '.git', '.svn', '_svn', '.dotnet', 'desktop.ini', '$RECYCLE.BIN', 'System Volume Information', 'Thumbs.db']`.
+This default is `['node_modules', '.git', '.svn', '_svn', '.dotnet', 'desktop.ini', 'System Volume Information', 'Thumbs.db']`.
 

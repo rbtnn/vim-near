@@ -4,7 +4,7 @@ let s:FILETYPE = 'near'
 
 let g:near_ignore = get(g:, 'near_ignore', [
 	\ 'node_modules', '.git', '.svn', '_svn', '.dotnet', 'desktop.ini',
-	\ '$RECYCLE.BIN', 'System Volume Information', 'Thumbs.db',
+	\ 'System Volume Information', 'Thumbs.db',
 	\ ])
 
 function! near#open(q_args, ...) abort
@@ -19,7 +19,6 @@ function! near#open(q_args, ...) abort
 			call near#close()
 		endif
 		let t:near = {
-			\ 'prev_view' : winsaveview(),
 			\ 'prev_winid' : win_getid(),
 			\ 'rootdir' : rootdir,
 			\ }
@@ -42,9 +41,8 @@ function! near#close() abort
 	call s:construct_or_init(v:false)
 	if (t:near['near_winid'] == win_getid()) && (&filetype == s:FILETYPE)
 		close
-		if (0 < win_id2win(t:near['prev_winid'])) && !empty(t:near['prev_view'])
+		if 0 < win_id2win(t:near['prev_winid'])
 			execute printf('%dwincmd w', win_id2win(t:near['prev_winid']))
-			call winrestview(t:near['prev_view'])
 		endif
 		call s:construct_or_init(v:true)
 	endif
@@ -145,7 +143,6 @@ function! s:construct_or_init(force_init) abort
 		let t:near = get(t:, 'near', {})
 	endif
 	let t:near['near_winid'] = get(t:near, 'near_winid', -1)
-	let t:near['prev_view'] = get(t:near, 'prev_view', {})
 	let t:near['prev_winid'] = get(t:near, 'prev_winid', -1)
 	let t:near['rootdir'] = get(t:near, 'rootdir', '')
 endfunction
@@ -196,7 +193,7 @@ function! s:readdir_rec(rootdir, path, depth) abort
 					else
 						let xs += [relpath]
 					endif
-				elseif isdirectory(relpath) && (has('win32') ? ('^rwxrwxrwx$' =~# getfperm(relpath)) : v:true)
+				elseif isdirectory(relpath) && (fnamemodify(name, ':t') !~# '^\$')
 					if rootdir == relpath[:len(rootdir) - 1]
 						let xs += [relpath[len(rootdir):] .. '/']
 					else
