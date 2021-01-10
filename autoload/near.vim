@@ -27,7 +27,7 @@ function! near#open(q_args) abort
 		execute printf('vertical resize %d', width)
 		setlocal buftype=nofile readonly nomodified nobuflisted
 		let &l:filetype = s:FILETYPE
-		let &l:statusline = printf('[%s] %s', s:FILETYPE, rootdir)
+		let &l:statusline = printf('[%s]', s:FILETYPE)
 	else
 		call s:error(printf('There are no files or directories in "%s".', rootdir))
 	endif
@@ -111,6 +111,24 @@ function! near#change_dir() abort
 	lcd `=rootdir`
 	call near#open(rootdir)
 	call winrestview(view)
+endfunction
+
+function! near#help() abort
+	let xs = [
+		\ ['Enter', 'Open a file or a directory under the cursor.'],
+		\ ['Space', 'Open a file or a directory under the cursor.'],
+		\ ['L', 'Open a file or a directory under the cursor.'],
+		\ ['H', 'Go up to parent directory.'],
+		\ ['C', 'Change the current directory to the Near''s directory.'],
+		\ ['~', 'Change the current directory to Home directory.'],
+		\ ['?', 'Print this help.'],
+		\ ]
+	for x in xs
+		echohl Title
+		echo x[0] .. ' key : '
+		echohl None
+		echon x[1]
+	endfor
 endfunction
 
 

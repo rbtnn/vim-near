@@ -29,6 +29,7 @@ __Keymappings in Near Window__
 |H          |Go up to parent directory.                               |
 |C          |Change the current directory to the Near's directory.    |
 |~          |Change the current directory to Home directory.          |
+|?          |Print help.                                              |
 
 ## Variables
 ### g:near\_ignore

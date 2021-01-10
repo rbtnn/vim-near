@@ -12,5 +12,6 @@ augroup near
 	autocmd FileType near  :nnoremap <buffer><silent>l         :<C-u>call near#select_file(getline('.'))<cr>
 	autocmd FileType near  :nnoremap <buffer><silent>c         :<C-u>call near#change_dir()<cr>
 	autocmd FileType near  :nnoremap <buffer><silent>~         :<C-u>call near#open('~')<cr>
+	autocmd FileType near  :nnoremap <buffer><silent>?         :<C-u>call near#help()<cr>
 augroup END
 
