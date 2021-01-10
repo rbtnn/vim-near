@@ -128,6 +128,16 @@ function! near#select_file(line) abort
 	endif
 endfunction
 
+function! near#change_dir() abort
+	call s:construct_or_init(v:false)
+	let rootdir = t:near['rootdir']
+	let view = winsaveview()
+	call near#close()
+	execute printf('lcd %s', rootdir)
+	call near#open(rootdir)
+	call winrestview(view)
+endfunction
+
 
 
 function! s:error(text) abort
