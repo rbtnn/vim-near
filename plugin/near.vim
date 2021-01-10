@@ -1,7 +1,7 @@
 
 let g:loaded_near = 1
 
-command! -count -complete=dir -nargs=* Near :call near#open(<q-args>, <count>)
+command! -complete=dir -nargs=* Near :call near#open(<q-args>)
 
 augroup near
 	autocmd!

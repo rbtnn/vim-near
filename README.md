@@ -7,8 +7,6 @@
 This plugin provides to select a file.
 This plugin is like [preservim/nerdtree](https://github.com/preservim/nerdtree).
 
-![](https://raw.githubusercontent.com/rbtnn/vim-near/main/near.gif)
-
 ## Installation
 
 This is an example of installation using [vim-plug](https://github.com/junegunn/vim-plug).

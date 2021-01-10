@@ -7,13 +7,9 @@ let g:near_ignore = get(g:, 'near_ignore', [
 	\ 'System Volume Information', 'Thumbs.db',
 	\ ])
 
-function! near#open(q_args, ...) abort
+function! near#open(q_args) abort
 	let rootdir = s:fix_path(isdirectory(expand(a:q_args)) ? expand(a:q_args) : getcwd())
-	let depth = get(a:000, 0, 1)
-	if depth <= 0
-		let depth = 1
-	endif
-	let lines = s:readdir_rec(rootdir, rootdir, depth)
+	let lines = s:readdir_rec(rootdir, rootdir)
 	if !empty(lines)
 		if &filetype == s:FILETYPE
 			call near#close()
@@ -55,50 +51,29 @@ function! near#run_tests() abort
 			call delete(s:TEST_LOG)
 		endif
 		let v:errors = []
-		set wildignore=*.gif
+		set wildignore=*.md
 		if has('nvim')
 			set wildignore+=.nvimlog
 		endif
 
 		call assert_equal(
-			\ sort([]),
-			\ sort(s:readdir_rec('.', '.', 0)))
-		call assert_equal(
-			\ sort(['.github/', 'LICENSE', 'README.md', 'autoload/', 'plugin/', 'syntax/']),
-			\ sort(s:readdir_rec('.', '.', 1)))
-		call assert_equal(
-			\ sort(['.github/', '.github/workflows/', 'LICENSE', 'README.md', 'autoload/', 'autoload/near.vim', 'plugin/', 'plugin/near.vim', 'syntax/', 'syntax/near.vim']),
-			\ sort(s:readdir_rec('.', '.', 2)))
-		call assert_equal(
-			\ sort(['.github/', '.github/workflows/', '.github/workflows/neovim.yml', '.github/workflows/vim.yml', 'LICENSE', 'README.md', 'autoload/', 'autoload/near.vim', 'plugin/', 'plugin/near.vim', 'syntax/', 'syntax/near.vim']),
-			\ sort(s:readdir_rec('.', '.', 3)))
-		call assert_equal(
-			\ sort([]),
-			\ sort(s:readdir_rec('./plugin', './plugin', 0)))
+			\ sort(['.github/', 'LICENSE', 'autoload/', 'plugin/', 'syntax/']),
+			\ sort(s:readdir_rec('.', '.')))
 		call assert_equal(
 			\ sort(['near.vim']),
-			\ sort(s:readdir_rec('./plugin', './plugin', 1)))
+			\ sort(s:readdir_rec('./autoload', './autoload')))
 		call assert_equal(
 			\ sort(['near.vim']),
-			\ sort(s:readdir_rec('./plugin', './plugin', 2)))
-		call assert_equal(
-			\ sort([]),
-			\ sort(s:readdir_rec('./syntax', './syntax', 0)))
+			\ sort(s:readdir_rec('./plugin', './plugin')))
 		call assert_equal(
 			\ sort(['near.vim']),
-			\ sort(s:readdir_rec('./syntax', './syntax', 1)))
-		call assert_equal(
-			\ sort(['near.vim']),
-			\ sort(s:readdir_rec('./syntax', './syntax', 2)))
-		call assert_equal(
-			\ sort([]),
-			\ sort(s:readdir_rec('./.github', './.github', 0)))
+			\ sort(s:readdir_rec('./syntax', './syntax')))
 		call assert_equal(
 			\ sort(['workflows/']),
-			\ sort(s:readdir_rec('./.github', './.github', 1)))
+			\ sort(s:readdir_rec('./.github', './.github')))
 		call assert_equal(
-			\ sort(['workflows/', 'workflows/neovim.yml', 'workflows/vim.yml']),
-			\ sort(s:readdir_rec('./.github', './.github', 2)))
+			\ sort(['neovim.yml', 'vim.yml']),
+			\ sort(s:readdir_rec('./.github/workflows', './.github/workflows')))
 
 		if !empty(v:errors)
 			call writefile(v:errors, s:TEST_LOG)
@@ -133,7 +108,7 @@ function! near#change_dir() abort
 	let rootdir = t:near['rootdir']
 	let view = winsaveview()
 	call near#close()
-	execute printf('lcd %s', rootdir)
+	lcd `=rootdir`
 	call near#open(rootdir)
 	call winrestview(view)
 endfunction
@@ -177,45 +152,40 @@ function! s:readdir(path) abort
 	endif
 endfunction
 
-function! s:readdir_rec(rootdir, path, depth) abort
+function! s:readdir_rec(rootdir, path) abort
 	let xs = []
-	if 0 < a:depth
-		let rootdir = a:rootdir
-		if !empty(rootdir) && ('/' != split(rootdir, '\zs')[-1])
-			let rootdir = rootdir .. '/'
+	let rootdir = a:rootdir
+	if !empty(rootdir) && ('/' != split(rootdir, '\zs')[-1])
+		let rootdir = rootdir .. '/'
+	endif
+	let names = []
+	try
+		let names = s:readdir(a:path)
+	catch /^Vim\%((\a\+)\)\=:E484:/
+		" skip the directory.
+		" E484: Can't open file ...
+	endtry
+	for name in names
+		let relpath = s:fix_path(a:path .. '/' .. name)
+		if empty(expand(relpath))
+			continue
 		endif
-		let names = []
-		try
-			let names = s:readdir(a:path)
-		catch /^Vim\%((\a\+)\)\=:E484:/
-			" skip the directory.
-			" E484: Can't open file ...
-		endtry
-		for name in names
-			let relpath = s:fix_path(a:path .. '/' .. name)
-			if empty(expand(relpath))
-				continue
-			endif
-			if -1 == index(g:near_ignore, name)
-				if filereadable(relpath)
-					if rootdir == relpath[:len(rootdir) - 1]
-						let xs += [relpath[len(rootdir):]]
-					else
-						let xs += [relpath]
-					endif
-				elseif isdirectory(relpath) && (fnamemodify(name, ':t') !~# '^\$')
-					if rootdir == relpath[:len(rootdir) - 1]
-						let xs += [relpath[len(rootdir):] .. '/']
-					else
-						let xs += [relpath .. '/']
-					endif
-					if 0 < a:depth - 1
-						let xs += s:readdir_rec(rootdir, relpath, a:depth - 1)
-					endif
+		if -1 == index(g:near_ignore, name)
+			if filereadable(relpath)
+				if rootdir == relpath[:len(rootdir) - 1]
+					let xs += [relpath[len(rootdir):]]
+				else
+					let xs += [relpath]
+				endif
+			elseif isdirectory(relpath) && (fnamemodify(name, ':t') !~# '^\$')
+				if rootdir == relpath[:len(rootdir) - 1]
+					let xs += [relpath[len(rootdir):] .. '/']
+				else
+					let xs += [relpath .. '/']
 				endif
 			endif
-		endfor
-	endif
+		endif
+	endfor
 	return xs
 endfunction
 
