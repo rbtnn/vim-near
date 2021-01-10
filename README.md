@@ -17,9 +17,9 @@ Plug 'rbtnn/vim-near'
 
 ## Commands
 ### :Near [{directory}]
-Open/Close a near window at {directory}. If {directory} is omited or invalid, use current directory.
+Open a Near window at {directory}. If {directory} is omited or invalid, use current directory.
 
-__Keymappings in Near Buffer__
+__Keymappings in Near Window__
 
 |Key        |Description                                              |
 |-----------|---------------------------------------------------------|
@@ -27,7 +27,7 @@ __Keymappings in Near Buffer__
 |Space      |Open a file or a directory under the cursor.             |
 |L          |Open a file or a directory under the cursor.             |
 |H          |Go up to parent directory.                               |
-|C          |Change the current directory to the near's directory.    |
+|C          |Change the current directory to the Near's directory.    |
 |~          |Change the current directory to Home directory.          |
 
 ## Variables
