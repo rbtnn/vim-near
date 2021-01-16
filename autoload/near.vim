@@ -36,11 +36,14 @@ endfunction
 function! near#close() abort
 	call s:construct_or_init(v:false)
 	if (t:near['near_winid'] == win_getid()) && (&filetype == s:FILETYPE)
-		close
-		if 0 < win_id2win(t:near['prev_winid'])
-			execute printf('%dwincmd w', win_id2win(t:near['prev_winid']))
+		" Does not close the Near window if here is CmdLineWindow.
+		if ':' != getcmdtype()
+			close
+			if 0 < win_id2win(t:near['prev_winid'])
+				execute printf('%dwincmd w', win_id2win(t:near['prev_winid']))
+			endif
+			call s:construct_or_init(v:true)
 		endif
-		call s:construct_or_init(v:true)
 	endif
 endfunction
 
@@ -101,6 +104,16 @@ function! near#select_file(line) abort
 			call near#open(path)
 		endif
 	endif
+endfunction
+
+function! near#updir() abort
+	call s:construct_or_init(v:false)
+	let curdir = fnamemodify(get(t:near, 'rootdir', '.'), ':p:h')
+	let updir = fnamemodify(curdir, ':h')
+	let pattern = '^' .. fnamemodify(curdir, ':t') .. '/$'
+	call near#open(updir)
+	call search(pattern)
+	call feedkeys('zz', 'nx')
 endfunction
 
 function! near#change_dir() abort
