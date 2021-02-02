@@ -96,7 +96,7 @@ function! near#select_file(line) abort
 		if filereadable(path)
 			call near#close()
 			if -1 == bufnr(path)
-				execute printf('edit %s', escape(path, '\ '))
+				execute printf('edit %s', escape(path, '#\ '))
 			else
 				execute printf('buffer %d', bufnr(path))
 			endif
