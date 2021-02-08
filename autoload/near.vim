@@ -2,13 +2,25 @@
 let s:TEST_LOG = expand('<sfile>:h:h:gs?\?/?') . '/test.log'
 let s:FILETYPE = 'near'
 
-let g:near_ignore = get(g:, 'near_ignore', [
-	\ 'node_modules', '.git', '.svn', '_svn', '.dotnet', 'desktop.ini',
-	\ 'System Volume Information', 'Thumbs.db',
-	\ ])
+let g:near_ignore = get(g:, 'near_ignore', [ 'desktop.ini', 'System Volume Information', 'Thumbs.db', ])
 
 function! near#open(q_args) abort
-	let rootdir = s:fix_path(isdirectory(expand(a:q_args)) ? expand(a:q_args) : getcwd())
+	let rootdir = a:q_args
+	if empty(rootdir)
+	   	if filereadable(bufname())
+			let rootdir = fnamemodify(bufname(), ':h')
+		else
+			let rootdir = getcwd()
+		endif
+	else
+		if isdirectory(rootdir)
+			let rootdir = rootdir
+		else
+			let rootdir = getcwd()
+		endif
+	endif
+	let rootdir = s:fix_path(rootdir)
+
 	let lines = s:readdir_rec(rootdir, rootdir)
 	if !empty(lines)
 		if &filetype == s:FILETYPE
@@ -60,7 +72,7 @@ function! near#run_tests() abort
 		endif
 
 		call assert_equal(
-			\ sort(['.github/', 'LICENSE', 'autoload/', 'plugin/', 'syntax/']),
+			\ sort(['.git/', '.github/', 'LICENSE', 'autoload/', 'doc/', 'plugin/', 'syntax/']),
 			\ sort(s:readdir_rec('.', '.')))
 		call assert_equal(
 			\ sort(['near.vim']),
@@ -130,6 +142,7 @@ function! near#help() abort
 	let xs = [
 		\ ['Enter', 'Open a file or a directory under the cursor.'],
 		\ ['Space', 'Open a file or a directory under the cursor.'],
+		\ ['Esc', 'Close the Near window.'],
 		\ ['L', 'Open a file or a directory under the cursor.'],
 		\ ['H', 'Go up to parent directory.'],
 		\ ['C', 'Change the current directory to the Near''s directory.'],
