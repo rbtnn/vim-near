@@ -13,8 +13,8 @@ function! near#open(q_args) abort
 			let rootdir = getcwd()
 		endif
 	else
-		if isdirectory(rootdir)
-			let rootdir = rootdir
+		if isdirectory(expand(rootdir))
+			let rootdir = expand(rootdir)
 		else
 			let rootdir = getcwd()
 		endif
