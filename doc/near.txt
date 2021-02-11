@@ -1,4 +1,4 @@
-*near.txt*  Select a file. This's like preservim/nerdtree.
+*near.txt*  a file system explorer. This's like preservim/nerdtree.
 
 Author : rbtnn <naru123456789@gmail.com>
 LICENSE: MIT license (see LICENSE.txt)
