@@ -14,5 +14,7 @@ augroup near
 	autocmd FileType near  :nnoremap <buffer><silent>c         :<C-u>call near#change_dir()<cr>
 	autocmd FileType near  :nnoremap <buffer><silent>~         :<C-u>call near#open('~')<cr>
 	autocmd FileType near  :nnoremap <buffer><silent>?         :<C-u>call near#help()<cr>
+	autocmd FileType near  :nnoremap <buffer><silent><C-o>     <nop>
+	autocmd FileType near  :nnoremap <buffer><silent><C-i>     <nop>
 augroup END
 
