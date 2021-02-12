@@ -4,7 +4,6 @@ let s:FILETYPE = 'near'
 
 let g:near_ignore = get(g:, 'near_ignore', [ 'desktop.ini', 'System Volume Information', 'Thumbs.db', ])
 
-
 function! near#open(q_args) abort
 	let rootdir = a:q_args
 	if empty(rootdir)
@@ -129,12 +128,13 @@ function! near#updir() abort
 		let curdir = fnamemodify(t:near['rootdir'], ':p:h')
 		if -1 != index(s:driveletters(), curdir)
 			call s:open('', s:driveletters(), v:true)
+			let pattern = curdir
 		else
 			let updir = fnamemodify(curdir, ':h')
 			call near#open(updir)
+			let pattern = fnamemodify(curdir, ':t') .. '/'
 		endif
-		let pattern = '^' .. fnamemodify(curdir, ':t') .. '/$'
-		call search(pattern)
+		call search('^' .. pattern .. '$')
 		call feedkeys('zz', 'nx')
 	endif
 endfunction
