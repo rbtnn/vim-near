@@ -1,4 +1,34 @@
 
+function! near#io#search(path, pattern, maxdepth) abort
+	let xs = []
+	let interrupts = v:false
+	if 0 < a:maxdepth
+		try
+			for name in s:readdir(a:path)
+				let abspath = near#io#fix_path(a:path .. '/' .. name)
+				if empty(expand(abspath))
+					continue
+				endif
+				if filereadable(abspath)
+					if name =~# a:pattern
+						let xs += [abspath]
+					endif
+				elseif isdirectory(abspath)
+					let dict = near#io#search(abspath, a:pattern, a:maxdepth - 1)
+					let xs += dict['xs']
+					if dict['interrupts']
+						let interrupts = v:true
+						break
+					endif
+				endif
+			endfor
+		catch /^Vim:Interrupt$/
+			let interrupts = v:true
+		endtry
+	endif
+	return { 'xs' : xs, 'interrupts' : interrupts }
+endfunction
+
 function! near#io#driveletters() abort
 	let xs = []
 	if has('win32')

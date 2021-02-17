@@ -42,6 +42,8 @@ Keymappings                                                  *near-keymappings*
 	Ctrl-i  : NOP
 	E       : Open a explorer.exe. (Windows OS only)
 	T       : Open a terminal window.
+	S       : Search a file by filename pattern matching.
+		  NOTE: You can set `g:near_maxdepth` for the max depth.
 	L       : Open a file or a directory under the cursor.
 	H       : Go up to parent directory.
 	C       : Change the current directory to the Near's directory.
