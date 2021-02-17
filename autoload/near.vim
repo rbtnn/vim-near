@@ -122,6 +122,7 @@ function! near#terminal() abort
 	if has('nvim')
 		new
 		call termopen(&shell, { 'cwd' : rootdir })
+		startinsert
 	else
 		call term_start(&shell, { 'cwd' : rootdir, 'term_finish' : 'close' })
 	endif
