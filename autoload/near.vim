@@ -159,11 +159,14 @@ function! near#explorer() abort
 endfunction
 
 function! near#terminal() abort
-	if !has('nvim')
-		call s:construct_or_init(v:false)
-		let rootdir = t:near['rootdir']
-		call near#close()
-		call term_start(&shell, { 'cwd' : rootdir })
+	call s:construct_or_init(v:false)
+	let rootdir = t:near['rootdir']
+	call near#close()
+	if has('nvim')
+		new
+		call termopen(&shell, { 'cwd' : rootdir })
+	else
+		call term_start(&shell, { 'cwd' : rootdir, 'term_finish' : 'close' })
 	endif
 endfunction
 
@@ -172,7 +175,7 @@ function! near#help() abort
 		\ ['Enter', 'Open a file or a directory under the cursor.'],
 		\ ['Space', 'Open a file or a directory under the cursor.'],
 		\ ['Esc', 'Close the Near window.'],
-		\ ['T', 'Open a terminal window. (Vim only)'],
+		\ ['T', 'Open a terminal window.'],
 		\ ['E', 'Open a explorer.exe. (Windows OS only)'],
 		\ ['L', 'Open a file or a directory under the cursor.'],
 		\ ['H', 'Go up to parent directory.'],
