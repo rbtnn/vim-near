@@ -19,8 +19,8 @@ function! near#open(q_args) abort
 			let rootdir = getcwd()
 		endif
 	endif
-	let rootdir = s:fix_path(rootdir)
-	let lines = s:readdir_rec(rootdir, rootdir)
+	let rootdir = near#io#fix_path(rootdir)
+	let lines = near#io#readdir(rootdir)
 	call s:open(rootdir, lines, v:false)
 endfunction
 
@@ -50,7 +50,7 @@ function! s:open(rootdir, lines, is_driveletters) abort
 endfunction
 
 function! near#close() abort
-	call s:construct_or_init(v:false)
+	call s:configure(v:false)
 	if (t:near['near_winid'] == win_getid()) && (&filetype == s:FILETYPE)
 		" Does not close the Near window if here is CmdLineWindow.
 		if ':' != getcmdtype()
@@ -58,7 +58,7 @@ function! near#close() abort
 			if 0 < win_id2win(t:near['prev_winid'])
 				execute printf('%dwincmd w', win_id2win(t:near['prev_winid']))
 			endif
-			call s:construct_or_init(v:true)
+			call s:configure(v:true)
 		endif
 	endif
 endfunction
@@ -77,22 +77,22 @@ function! near#run_tests() abort
 
 		call assert_equal(
 			\ sort(['.git/', '.github/', 'LICENSE', 'autoload/', 'doc/', 'plugin/', 'syntax/']),
-			\ sort(s:readdir_rec('.', '.')))
+			\ sort(near#io#readdir('.')))
 		call assert_equal(
 			\ sort(['near.vim']),
-			\ sort(s:readdir_rec('./autoload', './autoload')))
+			\ sort(near#io#readdir('./autoload')))
 		call assert_equal(
 			\ sort(['near.vim']),
-			\ sort(s:readdir_rec('./plugin', './plugin')))
+			\ sort(near#io#readdir('./plugin')))
 		call assert_equal(
 			\ sort(['near.vim']),
-			\ sort(s:readdir_rec('./syntax', './syntax')))
+			\ sort(near#io#readdir('./syntax')))
 		call assert_equal(
 			\ sort(['workflows/']),
-			\ sort(s:readdir_rec('./.github', './.github')))
+			\ sort(near#io#readdir('./.github')))
 		call assert_equal(
 			\ sort(['neovim.yml', 'vim.yml']),
-			\ sort(s:readdir_rec('./.github/workflows', './.github/workflows')))
+			\ sort(near#io#readdir('./.github/workflows')))
 
 		if !empty(v:errors)
 			call writefile(v:errors, s:TEST_LOG)
@@ -106,9 +106,9 @@ function! near#run_tests() abort
 endfunction
 
 function! near#select_file(line) abort
-	call s:construct_or_init(v:false)
+	call s:configure(v:false)
 	if (t:near['near_winid'] == win_getid()) && (&filetype == s:FILETYPE)
-		let path = s:fix_path((t:near['is_driveletters'] ? '' : (t:near['rootdir'] .. '/')) .. a:line)
+		let path = near#io#fix_path((t:near['is_driveletters'] ? '' : (t:near['rootdir'] .. '/')) .. a:line)
 		if filereadable(path)
 			call near#close()
 			if -1 == bufnr(path)
@@ -123,11 +123,11 @@ function! near#select_file(line) abort
 endfunction
 
 function! near#updir() abort
-	call s:construct_or_init(v:false)
+	call s:configure(v:false)
 	if !t:near['is_driveletters']
 		let curdir = fnamemodify(t:near['rootdir'], ':p:h')
-		if -1 != index(s:driveletters(), curdir)
-			call s:open('', s:driveletters(), v:true)
+		if -1 != index(near#io#driveletters(), curdir)
+			call s:open('', near#io#driveletters(), v:true)
 			let pattern = curdir
 		else
 			let updir = fnamemodify(curdir, ':h')
@@ -140,7 +140,7 @@ function! near#updir() abort
 endfunction
 
 function! near#change_dir() abort
-	call s:construct_or_init(v:false)
+	call s:configure(v:false)
 	let rootdir = t:near['rootdir']
 	let view = winsaveview()
 	call near#close()
@@ -151,7 +151,7 @@ endfunction
 
 function! near#explorer() abort
 	if has('win32')
-		call s:construct_or_init(v:false)
+		call s:configure(v:false)
 		let rootdir = fnamemodify(t:near['rootdir'], ':p')
 		call near#close()
 		execute '!start ' .. rootdir
@@ -159,7 +159,7 @@ function! near#explorer() abort
 endfunction
 
 function! near#terminal() abort
-	call s:construct_or_init(v:false)
+	call s:configure(v:false)
 	let rootdir = t:near['rootdir']
 	call near#close()
 	if has('nvim')
@@ -199,7 +199,7 @@ function! s:error(text) abort
 	echohl None
 endfunction
 
-function! s:construct_or_init(force_init) abort
+function! s:configure(force_init) abort
 	if a:force_init
 		let t:near = {}
 	else
@@ -209,73 +209,5 @@ function! s:construct_or_init(force_init) abort
 	let t:near['prev_winid'] = get(t:near, 'prev_winid', -1)
 	let t:near['rootdir'] = get(t:near, 'rootdir', '.')
 	let t:near['is_driveletters'] = get(t:near, 'is_driveletters', v:false)
-endfunction
-
-function! s:fix_path(path) abort
-	return substitute(a:path, '[\/]\+', '/', 'g')
-endfunction
-
-function! s:readdir(path) abort
-	let xs = []
-	try
-		if exists('*readdir')
-			let xs = readdir(a:path)
-		else
-			let saved = getcwd()
-			try
-				lcd `=a:path`
-				let xs = split(glob('.*') .. "\n" .. glob('*'), "\n")
-				call filter(xs, { _,x -> (x != '.') && (x != '..') })
-			finally
-				lcd `=saved`
-			endtry
-		endif
-	catch /^Vim\%((\a\+)\)\=:E484:/
-		" skip the directory.
-		" E484: Can't open file ...
-	endtry
-	return xs
-endfunction
-
-function! s:driveletters() abort
-	let xs = []
-	if has('win32')
-		for n in range(char2nr('A'), char2nr('Z'))
-			if isdirectory(nr2char(n) .. ':')
-				let xs += [nr2char(n) .. ':/']
-			endif
-		endfor
-	endif
-	return xs
-endfunction
-
-function! s:readdir_rec(rootdir, path) abort
-	let xs = []
-	let rootdir = a:rootdir
-	if !empty(rootdir) && ('/' != split(rootdir, '\zs')[-1])
-		let rootdir = rootdir .. '/'
-	endif
-	for name in s:readdir(a:path)
-		let relpath = s:fix_path(a:path .. '/' .. name)
-		if empty(expand(relpath))
-			continue
-		endif
-		if -1 == index(g:near_ignore, name)
-			if filereadable(relpath)
-				if rootdir == relpath[:len(rootdir) - 1]
-					let xs += [relpath[len(rootdir):]]
-				else
-					let xs += [relpath]
-				endif
-			elseif isdirectory(relpath) && (fnamemodify(name, ':t') !~# '^\$')
-				if rootdir == relpath[:len(rootdir) - 1]
-					let xs += [relpath[len(rootdir):] .. '/']
-				else
-					let xs += [relpath .. '/']
-				endif
-			endif
-		endif
-	endfor
-	return xs
 endfunction
 
