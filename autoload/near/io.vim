@@ -26,7 +26,7 @@ function! near#io#readdir(path) abort
 		if empty(expand(relpath))
 			continue
 		endif
-		if -1 == index(g:near_ignore, name)
+		if -1 == index(get(g:, 'near_ignore', [ 'desktop.ini', 'System Volume Information', 'Thumbs.db', ]), name)
 			if filereadable(relpath)
 				if rootdir == relpath[:len(rootdir) - 1]
 					let xs += [relpath[len(rootdir):]]

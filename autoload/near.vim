@@ -1,8 +1,5 @@
 
-let s:TEST_LOG = expand('<sfile>:h:h:gs?\?/?') . '/test.log'
 let s:FILETYPE = 'near'
-
-let g:near_ignore = get(g:, 'near_ignore', [ 'desktop.ini', 'System Volume Information', 'Thumbs.db', ])
 
 function! near#open(q_args) abort
 	let rootdir = a:q_args
@@ -45,7 +42,9 @@ function! s:open(rootdir, lines, is_driveletters) abort
 		let &l:filetype = s:FILETYPE
 		let &l:statusline = printf('[%s]', s:FILETYPE)
 	else
-		call s:error(printf('There are no files or directories in "%s".', a:rootdir))
+		echohl Error
+		echo printf('There are no files or directories in "%s".', a:rootdir)
+		echohl None
 	endif
 endfunction
 
@@ -61,48 +60,6 @@ function! near#close() abort
 			call s:configure(v:true)
 		endif
 	endif
-endfunction
-
-function! near#run_tests() abort
-	let saved_wildignore = &wildignore
-	try
-		if filereadable(s:TEST_LOG)
-			call delete(s:TEST_LOG)
-		endif
-		let v:errors = []
-		set wildignore=*.md
-		if has('nvim')
-			set wildignore+=.nvimlog
-		endif
-
-		call assert_equal(
-			\ sort(['.git/', '.github/', 'LICENSE', 'autoload/', 'doc/', 'plugin/', 'syntax/']),
-			\ sort(near#io#readdir('.')))
-		call assert_equal(
-			\ sort(['near.vim']),
-			\ sort(near#io#readdir('./autoload')))
-		call assert_equal(
-			\ sort(['near.vim']),
-			\ sort(near#io#readdir('./plugin')))
-		call assert_equal(
-			\ sort(['near.vim']),
-			\ sort(near#io#readdir('./syntax')))
-		call assert_equal(
-			\ sort(['workflows/']),
-			\ sort(near#io#readdir('./.github')))
-		call assert_equal(
-			\ sort(['neovim.yml', 'vim.yml']),
-			\ sort(near#io#readdir('./.github/workflows')))
-
-		if !empty(v:errors)
-			call writefile(v:errors, s:TEST_LOG)
-			for err in v:errors
-				call s:error(err)
-			endfor
-		endif
-	finally
-		let &wildignore = saved_wildignore
-	endtry
 endfunction
 
 function! near#select_file(line) abort
@@ -192,12 +149,6 @@ function! near#help() abort
 endfunction
 
 
-
-function! s:error(text) abort
-	echohl Error
-	echo a:text
-	echohl None
-endfunction
 
 function! s:configure(force_init) abort
 	if a:force_init
