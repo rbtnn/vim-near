@@ -149,11 +149,31 @@ function! near#change_dir() abort
 	call winrestview(view)
 endfunction
 
+function! near#explorer() abort
+	if has('win32')
+		call s:construct_or_init(v:false)
+		let rootdir = fnamemodify(t:near['rootdir'], ':p')
+		call near#close()
+		execute '!start ' .. rootdir
+	endif
+endfunction
+
+function! near#terminal() abort
+	if !has('nvim')
+		call s:construct_or_init(v:false)
+		let rootdir = t:near['rootdir']
+		call near#close()
+		call term_start(&shell, { 'cwd' : rootdir })
+	endif
+endfunction
+
 function! near#help() abort
 	let xs = [
 		\ ['Enter', 'Open a file or a directory under the cursor.'],
 		\ ['Space', 'Open a file or a directory under the cursor.'],
 		\ ['Esc', 'Close the Near window.'],
+		\ ['T', 'Open a terminal window. (Vim only)'],
+		\ ['E', 'Open a explorer.exe. (Windows OS only)'],
 		\ ['L', 'Open a file or a directory under the cursor.'],
 		\ ['H', 'Go up to parent directory.'],
 		\ ['C', 'Change the current directory to the Near''s directory.'],
@@ -162,7 +182,7 @@ function! near#help() abort
 		\ ]
 	for x in xs
 		echohl Title
-		echo x[0] .. ' key : '
+		echo ' ' .. x[0] .. ' key : '
 		echohl None
 		echon x[1]
 	endfor
@@ -193,19 +213,25 @@ function! s:fix_path(path) abort
 endfunction
 
 function! s:readdir(path) abort
-	if exists('*readdir')
-		return readdir(a:path)
-	else
-		let saved = getcwd()
-		try
-			lcd `=a:path`
-			let xs = split(glob('.*') .. "\n" .. glob('*'), "\n")
-			call filter(xs, { _,x -> (x != '.') && (x != '..') })
-			return xs
-		finally
-			lcd `=saved`
-		endtry
-	endif
+	let xs = []
+	try
+		if exists('*readdir')
+			let xs = readdir(a:path)
+		else
+			let saved = getcwd()
+			try
+				lcd `=a:path`
+				let xs = split(glob('.*') .. "\n" .. glob('*'), "\n")
+				call filter(xs, { _,x -> (x != '.') && (x != '..') })
+			finally
+				lcd `=saved`
+			endtry
+		endif
+	catch /^Vim\%((\a\+)\)\=:E484:/
+		" skip the directory.
+		" E484: Can't open file ...
+	endtry
+	return xs
 endfunction
 
 function! s:driveletters() abort
@@ -226,14 +252,7 @@ function! s:readdir_rec(rootdir, path) abort
 	if !empty(rootdir) && ('/' != split(rootdir, '\zs')[-1])
 		let rootdir = rootdir .. '/'
 	endif
-	let names = []
-	try
-		let names = s:readdir(a:path)
-	catch /^Vim\%((\a\+)\)\=:E484:/
-		" skip the directory.
-		" E484: Can't open file ...
-	endtry
-	for name in names
+	for name in s:readdir(a:path)
 		let relpath = s:fix_path(a:path .. '/' .. name)
 		if empty(expand(relpath))
 			continue
