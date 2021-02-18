@@ -52,22 +52,15 @@ function! near#search()
 				return
 			endif
 			let rootdir = t:near['rootdir']
-			let lines = []
-			let dict = near#io#search(rootdir, pattern, str2nr(maxdepth))
-			for abspath in dict['xs']
-				if abspath =~# '^' .. rootdir
-					let relpath = abspath[len(rootdir):]
-					if relpath =~# '^/'
-						let relpath = relpath[1:]
-					endif
-					let lines += [relpath]
-				else
-					let lines += [abspath]
-				endif
-			endfor
-			call s:open(rootdir, lines, v:false, v:true)
+			setlocal noreadonly modified
 			call clearmatches()
 			call matchadd('Search', pattern)
+			call s:set_statusline('(searching)')
+			silent! call deletebufline('%', 1, '$')
+			redraw
+			call near#io#search(rootdir, rootdir, pattern, str2nr(maxdepth), 1, 1)
+			setlocal buftype=nofile readonly nomodified nobuflisted
+			call s:set_statusline('')
 		endif
 	endif
 endfunction
@@ -196,10 +189,14 @@ function! s:open(rootdir, lines, is_driveletters, is_searchresult) abort
 		execute printf('vertical resize %d', width)
 		setlocal buftype=nofile readonly nomodified nobuflisted
 		let &l:filetype = s:FILETYPE
-		let &l:statusline = printf('[%s]', s:FILETYPE)
+		call s:set_statusline('')
 	else
 		call near#io#error(printf('There are no files or directories in "%s".', a:rootdir))
 	endif
+endfunction
+
+function! s:set_statusline(status) abort
+	let &l:statusline = printf('%%#Title#[%s%s]%%#StatusLine# %%l/%%L ', s:FILETYPE, a:status)
 endfunction
 
 function! s:is_near() abort

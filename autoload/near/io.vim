@@ -1,7 +1,8 @@
 
-function! near#io#search(path, pattern, maxdepth) abort
-	let xs = []
+function! near#io#search(rootdir, path, pattern, maxdepth, lnum, maxwidth) abort
 	let interrupts = v:false
+	let lnum = a:lnum
+	let maxwidth = a:maxwidth
 	if 0 < a:maxdepth
 		try
 			for fname in s:readdir(a:path)
@@ -9,13 +10,17 @@ function! near#io#search(path, pattern, maxdepth) abort
 				if s:is_ignore(abspath)
 					continue
 				endif
+				let dict = {}
 				if filereadable(abspath)
 					if fname =~# a:pattern
-						let xs += [abspath]
+						let dict = s:search_cb(a:rootdir, lnum, maxwidth, abspath, interrupts)
 					endif
 				elseif isdirectory(abspath)
-					let dict = near#io#search(abspath, a:pattern, a:maxdepth - 1)
-					let xs += dict['xs']
+					let dict = near#io#search(a:rootdir, abspath, a:pattern, a:maxdepth - 1, lnum, maxwidth)
+				endif
+				if !empty(dict)
+					let lnum = dict['lnum']
+					let maxwidth = dict['maxwidth']
 					if dict['interrupts']
 						let interrupts = v:true
 						break
@@ -26,7 +31,7 @@ function! near#io#search(path, pattern, maxdepth) abort
 			let interrupts = v:true
 		endtry
 	endif
-	return { 'xs' : xs, 'interrupts' : interrupts }
+	return { 'lnum' : lnum, 'maxwidth' : maxwidth, 'interrupts' : interrupts }
 endfunction
 
 function! near#io#driveletters() abort
@@ -103,5 +108,24 @@ function! s:readdir(path) abort
 		" E484: Can't open file ...
 	endtry
 	return xs
+endfunction
+
+function! s:search_cb(rootdir, lnum, maxwidth, line, interrupts) abort
+	let line = a:line
+	if line =~# '^' .. a:rootdir
+		let relpath = line[len(a:rootdir):]
+		if relpath =~# '^/'
+			let relpath = relpath[1:]
+		endif
+		let line = relpath
+	endif
+	call setbufline('%', a:lnum, line)
+	redraw
+	let maxwidth = a:maxwidth
+	if maxwidth < strdisplaywidth(line) + 1
+		let maxwidth = strdisplaywidth(line) + 1
+	endif
+	execute printf('vertical resize %d', maxwidth)
+	return { 'lnum' : a:lnum + 1, 'maxwidth' : maxwidth, 'interrupts' : a:interrupts }
 endfunction
 
