@@ -39,28 +39,28 @@ function! near#search()
 		if t:near['is_driveletters']
 			call near#io#error('Can not search under the driveletters.')
 		else
-			let pattern = input('pattern>')
+			let pattern = s:input_search_param('pattern', { v -> !empty(v) }, 'Please type a filename pattern!', '')
 			if empty(pattern)
-				echo ' '
-				call near#io#error('Please type a filename pattern!')
 				return
 			endif
-			let maxdepth = input('max-depth>', 3)
-			if maxdepth !~# '^\d\+$'
-				echo ' '
-				call near#io#error('Please type a number as max-depth!')
+			let maxdepth = s:input_search_param('max-depth', { v -> v =~# '^\d\+$' }, 'Please type a number as max-depth!', '3')
+			if empty(maxdepth)
 				return
 			endif
 			let rootdir = t:near['rootdir']
 			setlocal noreadonly modified
 			call clearmatches()
-			call matchadd('Search', pattern)
-			call s:set_statusline('(searching)')
+			call matchadd('Search', pattern[0])
+			call s:set_statusline()
 			silent! call deletebufline('%', 1, '$')
 			redraw
-			call near#io#search(rootdir, rootdir, pattern, str2nr(maxdepth), 1, 1)
+			call near#io#search(rootdir, rootdir, pattern[0], str2nr(maxdepth[0]), 1, 1)
 			setlocal buftype=nofile readonly nomodified nobuflisted
-			call s:set_statusline('')
+			let t:near['is_searchresult'] = v:true
+			call s:set_statusline()
+			echohl Title
+			echo 'Search has completed!'
+			echohl None
 		endif
 	endif
 endfunction
@@ -189,14 +189,14 @@ function! s:open(rootdir, lines, is_driveletters, is_searchresult) abort
 		execute printf('vertical resize %d', width)
 		setlocal buftype=nofile readonly nomodified nobuflisted
 		let &l:filetype = s:FILETYPE
-		call s:set_statusline('')
+		call s:set_statusline()
 	else
 		call near#io#error(printf('There are no files or directories in "%s".', a:rootdir))
 	endif
 endfunction
 
-function! s:set_statusline(status) abort
-	let &l:statusline = printf('%%#Title#[%s%s]%%#StatusLine# %%l/%%L ', s:FILETYPE, a:status)
+function! s:set_statusline() abort
+	let &l:statusline = printf('%%#Title#[%s]%%#StatusLine# %%l/%%L ', s:FILETYPE)
 endfunction
 
 function! s:is_near() abort
@@ -215,5 +215,18 @@ function! s:configure(force_init) abort
 	let t:near['rootdir'] = get(t:near, 'rootdir', '.')
 	let t:near['is_driveletters'] = get(t:near, 'is_driveletters', v:false)
 	let t:near['is_searchresult'] = get(t:near, 'is_searchresult', v:false)
+endfunction
+
+function! s:input_search_param(name, chk_cb, errmsg, default)
+	echohl Title
+	let v = input(a:name .. '>', a:default)
+	echohl None
+	if a:chk_cb(v)
+		return [v]
+	else
+		echo ' '
+		call near#io#error(a:errmsg)
+		return []
+	endif
 endfunction
 

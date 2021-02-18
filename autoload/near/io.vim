@@ -92,7 +92,7 @@ function! s:readdir(path) abort
 	let xs = []
 	try
 		if exists('*readdir')
-			let xs = readdir(a:path)
+			silent! let xs = readdir(a:path)
 		else
 			let saved = getcwd()
 			try
@@ -120,6 +120,7 @@ function! s:search_cb(rootdir, lnum, maxwidth, line, interrupts) abort
 		let line = relpath
 	endif
 	call setbufline('%', a:lnum, line)
+	call cursor('$', 1)
 	redraw
 	let maxwidth = a:maxwidth
 	if maxwidth < strdisplaywidth(line) + 1
