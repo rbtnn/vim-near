@@ -38,9 +38,7 @@ function! near#test#run() abort
 		if !empty(v:errors)
 			call writefile(v:errors, s:TEST_LOG)
 			for err in v:errors
-				echohl Error
-				echo err
-				echohl None
+				call near#io#error(err)
 			endfor
 		endif
 	finally

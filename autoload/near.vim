@@ -37,30 +37,37 @@ endfunction
 function! near#search()
 	if s:is_near()
 		if t:near['is_driveletters']
-			echohl Error
-			echo 'Can not search under the driveletters.'
-			echohl None
+			call near#io#error('Can not search under the driveletters.')
 		else
-			let pattern = input('>')
-			if !empty(pattern)
-				let rootdir = t:near['rootdir']
-				let lines = []
-				let dict = near#io#search(rootdir, pattern, get(g:, 'near_maxdepth', 5))
-				for abspath in dict['xs']
-					if abspath =~# '^' .. rootdir
-						let relpath = abspath[len(rootdir):]
-						if relpath =~# '^/'
-							let relpath = relpath[1:]
-						endif
-						let lines += [relpath]
-					else
-						let lines += [abspath]
-					endif
-				endfor
-				call s:open(rootdir, lines, v:false, v:true)
-				call clearmatches()
-				call matchadd('Search', pattern)
+			let pattern = input('pattern>')
+			if empty(pattern)
+				echo ' '
+				call near#io#error('Please type a filename pattern!')
+				return
 			endif
+			let maxdepth = input('max-depth>', 3)
+			if maxdepth !~# '^\d\+$'
+				echo ' '
+				call near#io#error('Please type a number as max-depth!')
+				return
+			endif
+			let rootdir = t:near['rootdir']
+			let lines = []
+			let dict = near#io#search(rootdir, pattern, str2nr(maxdepth))
+			for abspath in dict['xs']
+				if abspath =~# '^' .. rootdir
+					let relpath = abspath[len(rootdir):]
+					if relpath =~# '^/'
+						let relpath = relpath[1:]
+					endif
+					let lines += [relpath]
+				else
+					let lines += [abspath]
+				endif
+			endfor
+			call s:open(rootdir, lines, v:false, v:true)
+			call clearmatches()
+			call matchadd('Search', pattern)
 		endif
 	endif
 endfunction
@@ -191,9 +198,7 @@ function! s:open(rootdir, lines, is_driveletters, is_searchresult) abort
 		let &l:filetype = s:FILETYPE
 		let &l:statusline = printf('[%s]', s:FILETYPE)
 	else
-		echohl Error
-		echo printf('There are no files or directories in "%s".', a:rootdir)
-		echohl None
+		call near#io#error(printf('There are no files or directories in "%s".', a:rootdir))
 	endif
 endfunction
 
