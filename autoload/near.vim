@@ -50,7 +50,7 @@ function! near#search()
 			let rootdir = t:near['rootdir']
 			setlocal noreadonly modified
 			call clearmatches()
-			call matchadd('Search', pattern[0])
+			call matchadd('Search', '\c' .. pattern[0])
 			call s:set_statusline()
 			silent! call deletebufline('%', 1, '$')
 			redraw

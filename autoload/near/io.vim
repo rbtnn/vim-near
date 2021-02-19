@@ -12,7 +12,8 @@ function! near#io#search(rootdir, path, pattern, maxdepth, lnum, maxwidth) abort
 				endif
 				let dict = {}
 				if filereadable(abspath)
-					if fname =~# a:pattern
+					" depend on &ignorecase
+					if fname =~ a:pattern
 						let dict = s:search_cb(a:rootdir, lnum, maxwidth, abspath, interrupts)
 					endif
 				elseif isdirectory(abspath)
