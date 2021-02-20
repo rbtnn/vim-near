@@ -34,7 +34,7 @@ function! near#close() abort
 	endif
 endfunction
 
-function! near#search()
+function! near#search() abort
 	if s:is_near()
 		if t:near['is_driveletters']
 			call near#io#error('Can not search under the driveletters.')
@@ -196,7 +196,7 @@ function! s:open(rootdir, lines, is_driveletters, is_searchresult) abort
 endfunction
 
 function! s:set_statusline() abort
-	let &l:statusline = printf('%%#Title#[%s]%%#StatusLine# %%l/%%L ', s:FILETYPE)
+	let &l:statusline = printf('[%s] %%l/%%L ', s:FILETYPE)
 endfunction
 
 function! s:is_near() abort
@@ -217,7 +217,7 @@ function! s:configure(force_init) abort
 	let t:near['is_searchresult'] = get(t:near, 'is_searchresult', v:false)
 endfunction
 
-function! s:input_search_param(name, chk_cb, errmsg, default)
+function! s:input_search_param(name, chk_cb, errmsg, default) abort
 	echohl Title
 	let v = input(a:name .. '>', a:default)
 	echohl None
