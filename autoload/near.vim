@@ -171,8 +171,11 @@ endfunction
 
 function! s:open(rootdir, lines, is_driveletters, is_searchresult) abort
 	if !empty(a:lines)
+		let pattern = ''
 		if &filetype == s:FILETYPE
 			call near#close()
+		else
+			let pattern = fnamemodify(bufname(), ':t')
 		endif
 		let t:near = {
 			\ 'prev_winid' : win_getid(),
@@ -190,6 +193,10 @@ function! s:open(rootdir, lines, is_driveletters, is_searchresult) abort
 		setlocal buftype=nofile readonly nomodified nobuflisted
 		let &l:filetype = s:FILETYPE
 		call s:set_statusline()
+		if !empty(pattern)
+			call search('^' .. pattern .. '$')
+			call feedkeys('zz', 'nx')
+		endif
 	else
 		call near#io#error(printf('There are no files or directories in "%s".', a:rootdir))
 	endif
