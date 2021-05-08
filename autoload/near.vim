@@ -185,7 +185,7 @@ function! s:open(rootdir, lines, is_driveletters, is_searchresult) abort
 			\ }
 		vnew
 		let t:near['near_winid'] = win_getid()
-		setlocal noreadonly modified
+		setlocal noreadonly modified nonumber
 		silent! call deletebufline('%', 1, '$')
 		call setbufline('%', 1, a:lines)
 		let width = max(map(copy(a:lines), { _,x -> strdisplaywidth(x) })) + 1
