@@ -8,6 +8,7 @@ function! dig#git#diff(path) abort
 	echohl Title
 	let args = split(input('git-diff arguments>', ''), '\s\+')
 	echohl None
+	redraw
 	let toplevel = dig#git#rootdir(a:path)
 	let dict = {}
 	let cmd = ['git', '--no-pager', 'diff', '--numstat'] + args
@@ -35,7 +36,7 @@ function! dig#git#diff(path) abort
 		let s:info_caches[toplevel] = dict
 		return lines
 	else
-		call s:error(toplevel, 'Not a git repository.')
+		return []
 	endif
 endfunction
 
@@ -185,7 +186,7 @@ function! s:jump_diff(fullpath) abort
 		endif
 	endif
 	if !ok
-		call s:error(toplevel, 'Can not jump this!')
+		call dig#io#error('Can not jump this!')
 	endif
 endfunction
 

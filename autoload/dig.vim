@@ -139,18 +139,22 @@ function! dig#git_diff() abort
 		if executable('git')
 			let rootdir = t:dig['rootdir']
 			let lines = dig#git#diff(fnamemodify(rootdir, ':p'))
-			call s:open(rootdir, lines, v:false, v:false, v:true)
-			setlocal noreadonly modified
-			call clearmatches()
-			if hlexists('diffAdded')
-				call matchadd('diffAdded', '+\d\+')
-			elseif hlexists('DiffAdd')
-				call matchadd('DiffAdd', '+\d\+')
-			endif
-			if hlexists('diffRemoved')
-				call matchadd('diffRemoved',   '-\d\+')
-			elseif hlexists('DiffDelete')
-				call matchadd('DiffDelete',   '-\d\+')
+			if empty(lines)
+				call dig#io#error('Not a git repository or no modified files.')
+			else
+				call s:open(rootdir, lines, v:false, v:false, v:true)
+				setlocal noreadonly modified
+				call clearmatches()
+				if hlexists('diffAdded')
+					call matchadd('diffAdded', '+\d\+')
+				elseif hlexists('DiffAdd')
+					call matchadd('DiffAdd', '+\d\+')
+				endif
+				if hlexists('diffRemoved')
+					call matchadd('diffRemoved',   '-\d\+')
+				elseif hlexists('DiffDelete')
+					call matchadd('DiffDelete',   '-\d\+')
+				endif
 			endif
 		endif
 	endif
