@@ -4,7 +4,7 @@ let s:FILETYPE = 'dig'
 function! dig#open(q_args) abort
 	let rootdir = a:q_args
 	if empty(rootdir)
-	   	if filereadable(bufname())
+		if filereadable(bufname())
 			let rootdir = fnamemodify(bufname(), ':h')
 		else
 			let rootdir = getcwd()
@@ -18,7 +18,7 @@ function! dig#open(q_args) abort
 	endif
 	let rootdir = dig#io#fix_path(rootdir)
 	let lines = dig#io#readdir(rootdir)
-	call s:open(rootdir, lines, v:false, v:false)
+	call s:open(rootdir, lines, v:false, v:false, v:false)
 endfunction
 
 function! dig#close() abort
@@ -67,35 +67,40 @@ endfunction
 
 function! dig#select_file(line) abort
 	if s:is_dig()
-		let path = dig#io#fix_path((t:dig['is_driveletters'] ? '' : (t:dig['rootdir'] .. '/')) .. a:line)
-		if filereadable(path)
-			call dig#close()
-			if -1 == bufnr(path)
-				execute printf('edit %s', escape(path, '#\ '))
-			else
-				execute printf('buffer %d', bufnr(path))
+		if t:dig['is_gitdiff']
+			let rootdir = dig#git#rootdir(fnamemodify(t:dig['rootdir'], ':p'))
+			call dig#git#show_diff(rootdir, getline('.'))
+		else
+			let path = dig#io#fix_path((t:dig['is_driveletters'] ? '' : (t:dig['rootdir'] .. '/')) .. a:line)
+			if filereadable(path)
+				call dig#close()
+				if -1 == bufnr(path)
+					execute printf('edit %s', escape(path, '#\ '))
+				else
+					execute printf('buffer %d', bufnr(path))
+				endif
+			elseif isdirectory(path)
+				call dig#open(path)
 			endif
-		elseif isdirectory(path)
-			call dig#open(path)
 		endif
 	endif
 endfunction
 
 function! dig#updir() abort
 	if s:is_dig()
-		if t:dig['is_searchresult']
+		if t:dig['is_searchresult'] || t:dig['is_gitdiff']
 			if empty(t:dig['rootdir'])
-				call s:open(t:dig['rootdir'], dig#io#driveletters(), v:true, v:false)
+				call s:open(t:dig['rootdir'], dig#io#driveletters(), v:true, v:false, v:false)
 			else
 				let lines = dig#io#readdir(t:dig['rootdir'])
-				call s:open(t:dig['rootdir'], lines, v:false, v:false)
+				call s:open(t:dig['rootdir'], lines, v:false, v:false, v:false)
 			endif
 		elseif t:dig['is_driveletters']
 			" nop
 		else
 			let curdir = fnamemodify(t:dig['rootdir'], ':p:h')
 			if -1 != index(dig#io#driveletters(), curdir)
-				call s:open('', dig#io#driveletters(), v:true, v:false)
+				call s:open('', dig#io#driveletters(), v:true, v:false, v:false)
 				let pattern = curdir
 			else
 				let updir = fnamemodify(curdir, ':h')
@@ -129,6 +134,42 @@ function! dig#explorer() abort
 	endif
 endfunction
 
+function! dig#git_diff() abort
+	if s:is_dig()
+		if executable('git')
+			let rootdir = t:dig['rootdir']
+			let lines = dig#git#diff(fnamemodify(rootdir, ':p'))
+			call s:open(rootdir, lines, v:false, v:false, v:true)
+			setlocal noreadonly modified
+			call clearmatches()
+			if hlexists('diffAdded')
+				call matchadd('diffAdded', '+\d\+')
+			elseif hlexists('DiffAdd')
+				call matchadd('DiffAdd', '+\d\+')
+			endif
+			if hlexists('diffRemoved')
+				call matchadd('diffRemoved',   '-\d\+')
+			elseif hlexists('DiffDelete')
+				call matchadd('DiffDelete',   '-\d\+')
+			endif
+		endif
+	endif
+endfunction
+
+function! dig#change_gitrootdir() abort
+	if s:is_dig()
+		if executable('git')
+			let rootdir = dig#git#rootdir(fnamemodify(t:dig['rootdir'], ':p'))
+			let view = winsaveview()
+			call dig#close()
+			lcd `=rootdir`
+			call dig#open(rootdir)
+			call winrestview(view)
+		else
+		endif
+	endif
+endfunction
+
 function! dig#terminal() abort
 	if s:is_dig()
 		let rootdir = t:dig['rootdir']
@@ -146,15 +187,16 @@ endfunction
 function! dig#help() abort
 	if s:is_dig()
 		let xs = [
-			\ ['Enter/Space', 'Open a file or a directory under the cursor.'],
+			\ ['L/Enter/Space', 'Open a file or a directory under the cursor.'],
 			\ ['Esc', 'Close the dig window.'],
-			\ ['T', 'Open a terminal window.'],
-			\ ['S', 'Search a file by filename pattern matching.'],
-			\ ['E', 'Open a explorer.exe. (Windows OS only)'],
-			\ ['L', 'Open a file or a directory under the cursor.'],
-			\ ['H', 'Go up to parent directory.'],
 			\ ['C', 'Set the current directory to the dig''s directory.'],
-			\ ['~', 'Change the current directory to Home directory.'],
+			\ ['D', 'Show git-diff. (execuable git only)'],
+			\ ['E', 'Open a explorer.exe. (Windows OS only)'],
+			\ ['G', 'Go to the git root directory.'],
+			\ ['H', 'Go up to parent directory.'],
+			\ ['S', 'Search a file by filename pattern matching.'],
+			\ ['T', 'Open a terminal window.'],
+			\ ['~', 'Go to Home directory.'],
 			\ ['?', 'Print this help.'],
 			\ ]
 		for x in xs
@@ -168,7 +210,7 @@ endfunction
 
 
 
-function! s:open(rootdir, lines, is_driveletters, is_searchresult) abort
+function! s:open(rootdir, lines, is_driveletters, is_searchresult, is_gitdiff) abort
 	if !empty(a:lines)
 		let pattern = ''
 		if &filetype == s:FILETYPE
@@ -181,6 +223,7 @@ function! s:open(rootdir, lines, is_driveletters, is_searchresult) abort
 			\ 'rootdir' : a:rootdir,
 			\ 'is_driveletters' : a:is_driveletters,
 			\ 'is_searchresult' : a:is_searchresult,
+			\ 'is_gitdiff' : a:is_gitdiff,
 			\ }
 		vnew
 		let t:dig['dig_winid'] = win_getid()

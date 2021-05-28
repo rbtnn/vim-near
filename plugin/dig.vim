@@ -9,6 +9,8 @@ augroup dig
 	autocmd FileType dig  :nnoremap <buffer><silent><cr>      :<C-u>call dig#select_file(getline('.'))<cr>
 	autocmd FileType dig  :nnoremap <buffer><silent><space>   :<C-u>call dig#select_file(getline('.'))<cr>
 	autocmd FileType dig  :nnoremap <buffer><silent><esc>     :<C-u>call dig#close()<cr>
+	autocmd FileType dig  :nnoremap <buffer><silent>d         :<C-u>call dig#git_diff()<cr>
+	autocmd FileType dig  :nnoremap <buffer><silent>g         :<C-u>call dig#change_gitrootdir()<cr>
 	autocmd FileType dig  :nnoremap <buffer><silent>t         :<C-u>call dig#terminal()<cr>
 	autocmd FileType dig  :nnoremap <buffer><silent>e         :<C-u>call dig#explorer()<cr>
 	autocmd FileType dig  :nnoremap <buffer><silent>s         :<C-u>call dig#search()<cr>
