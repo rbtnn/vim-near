@@ -20,7 +20,7 @@ function! dig#test#run() abort
 			\ sort(['dig.vim', 'dig/']),
 			\ sort(dig#io#readdir('./autoload')))
 		call assert_equal(
-			\ sort(['io.vim', 'test.vim']),
+			\ sort(['git.vim', 'io.vim', 'sillyiconv.vim', 'test.vim']),
 			\ sort(dig#io#readdir('./autoload/dig')))
 		call assert_equal(
 			\ sort(['dig.vim']),
@@ -45,4 +45,3 @@ function! dig#test#run() abort
 		let &wildignore = saved_wildignore
 	endtry
 endfunction
-

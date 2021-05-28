@@ -49,7 +49,7 @@ function! dig#search() abort
 			endif
 			let rootdir = t:dig['rootdir']
 			setlocal noreadonly modified
-			call clearmatches()
+			call clearmatches(win_getid())
 			call matchadd('Search', '\c' .. pattern[0])
 			call s:set_statusline()
 			silent! call deletebufline('%', 1, '$')
@@ -61,6 +61,23 @@ function! dig#search() abort
 			echohl Title
 			echo 'Search has completed!'
 			echohl None
+		endif
+	endif
+endfunction
+
+function! dig#open_bookmark(n) abort
+	let path = get(get(g:, 'dig_bookmarks', {}), a:n, '')
+	if !empty(path)
+		let path = expand(path)
+		if filereadable(path)
+			call dig#close()
+			if -1 == bufnr(path)
+				execute printf('edit %s', escape(path, '#\ '))
+			else
+				execute printf('buffer %d', bufnr(path))
+			endif
+		elseif isdirectory(path)
+			call dig#open(path)
 		endif
 	endif
 endfunction
@@ -144,7 +161,7 @@ function! dig#git_diff() abort
 			else
 				call s:open(rootdir, lines, v:false, v:false, v:true)
 				setlocal noreadonly modified
-				call clearmatches()
+				call clearmatches(win_getid())
 				if hlexists('diffAdded')
 					call matchadd('diffAdded', '+\d\+')
 				elseif hlexists('DiffAdd')
@@ -191,16 +208,28 @@ endfunction
 function! dig#help() abort
 	if s:is_dig()
 		let xs = [
-			\ ['L/Enter/Space', 'Open a file or a directory under the cursor.'],
+			\ ['l/Enter/Space', 'Open a file or a directory under the cursor.'],
 			\ ['Esc', 'Close the dig window.'],
-			\ ['C', 'Set the current directory to the dig''s directory.'],
-			\ ['D', 'Show git-diff. (execuable git only)'],
-			\ ['E', 'Open a explorer.exe. (Windows OS only)'],
-			\ ['R', 'Go to the git root directory.'],
-			\ ['H', 'Go up to parent directory.'],
-			\ ['S', 'Search a file by filename pattern matching.'],
-			\ ['T', 'Open a terminal window.'],
+			\ ['c', 'Set the current directory to the dig''s directory.'],
+			\ ['d', 'Show git-diff. (execuable git only)'],
+			\ ['e', 'Open a explorer.exe. (Windows OS only)'],
+			\ ['r', 'Go to the git root directory.'],
+			\ ['h', 'Go up to parent directory.'],
+			\ ['s', 'Search a file by filename pattern matching.'],
+			\ ['t', 'Open a terminal window.'],
 			\ ['~', 'Go to Home directory.'],
+			\ ]
+		for n in range(1, 9)
+			let path = get(get(g:, 'dig_bookmarks', {}), n, '')
+			if !empty(path)
+				if filereadable(expand(path)) || isdirectory(expand(path))
+					let xs += [
+						\ [n, printf('Open "%s".', path)],
+						\ ]
+				endif
+			endif
+		endfor
+		let xs += [
 			\ ['?', 'Print this help.'],
 			\ ]
 		for x in xs
@@ -235,6 +264,10 @@ function! s:open(rootdir, lines, is_driveletters, is_searchresult, is_gitdiff) a
 		silent! call deletebufline('%', 1, '$')
 		call setbufline('%', 1, a:lines)
 		let width = max(map(copy(a:lines), { _,x -> strdisplaywidth(x) })) + 1
+		let maxwidth = get(g:, 'dig_maxwidth', 0)
+		if (0 < maxwidth) && (maxwidth < width)
+			let width = maxwidth
+		endif
 		execute printf('vertical resize %d', width)
 		setlocal buftype=nofile readonly nomodified nobuflisted
 		let &l:filetype = s:FILETYPE
