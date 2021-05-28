@@ -1,12 +1,12 @@
 
-function! near#io#search(rootdir, path, pattern, maxdepth, lnum, maxwidth) abort
+function! dig#io#search(rootdir, path, pattern, maxdepth, lnum, maxwidth) abort
 	let interrupts = v:false
 	let lnum = a:lnum
 	let maxwidth = a:maxwidth
 	if 0 < a:maxdepth
 		try
 			for fname in s:readdir(a:path)
-				let abspath = near#io#fix_path(a:path .. '/' .. fname)
+				let abspath = dig#io#fix_path(a:path .. '/' .. fname)
 				if s:is_ignore(abspath)
 					continue
 				endif
@@ -17,7 +17,7 @@ function! near#io#search(rootdir, path, pattern, maxdepth, lnum, maxwidth) abort
 						let dict = s:search_cb(a:rootdir, lnum, maxwidth, abspath, interrupts)
 					endif
 				elseif isdirectory(abspath)
-					let dict = near#io#search(a:rootdir, abspath, a:pattern, a:maxdepth - 1, lnum, maxwidth)
+					let dict = dig#io#search(a:rootdir, abspath, a:pattern, a:maxdepth - 1, lnum, maxwidth)
 				endif
 				if !empty(dict)
 					let lnum = dict['lnum']
@@ -35,7 +35,7 @@ function! near#io#search(rootdir, path, pattern, maxdepth, lnum, maxwidth) abort
 	return { 'lnum' : lnum, 'maxwidth' : maxwidth, 'interrupts' : interrupts }
 endfunction
 
-function! near#io#driveletters() abort
+function! dig#io#driveletters() abort
 	let xs = []
 	if has('win32')
 		for n in range(char2nr('A'), char2nr('Z'))
@@ -47,24 +47,24 @@ function! near#io#driveletters() abort
 	return xs
 endfunction
 
-function! near#io#error(text) abort
+function! dig#io#error(text) abort
 	echohl Error
 	echo a:text
 	echohl None
 endfunction
 
-function! near#io#fix_path(path) abort
+function! dig#io#fix_path(path) abort
 	return substitute(a:path, '[\/]\+', '/', 'g')
 endfunction
 
-function! near#io#readdir(path) abort
+function! dig#io#readdir(path) abort
 	let xs = []
 	let rootdir = a:path
 	if !empty(rootdir) && ('/' != split(rootdir, '\zs')[-1])
 		let rootdir = rootdir .. '/'
 	endif
 	for fname in s:readdir(rootdir)
-		let relpath = near#io#fix_path(rootdir .. fname)
+		let relpath = dig#io#fix_path(rootdir .. fname)
 		if s:is_ignore(relpath)
 			continue
 		endif

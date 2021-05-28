@@ -16,5 +16,5 @@ jobs:
       - name: Run unit tests
         run: |
           nvim --version
-          nvim -u NONE -N --noplugin -c "set rtp+=." -c "call near#test#run()" -c "qa!"
+          nvim -u NONE -N --noplugin -c "set rtp+=." -c "call dig#test#run()" -c "qa!"
           if test -f test.log; then exit 1; fi

@@ -1,7 +1,7 @@
 
-let s:FILETYPE = 'near'
+let s:FILETYPE = 'dig'
 
-function! near#open(q_args) abort
+function! dig#open(q_args) abort
 	let rootdir = a:q_args
 	if empty(rootdir)
 	   	if filereadable(bufname())
@@ -16,28 +16,28 @@ function! near#open(q_args) abort
 			let rootdir = getcwd()
 		endif
 	endif
-	let rootdir = near#io#fix_path(rootdir)
-	let lines = near#io#readdir(rootdir)
+	let rootdir = dig#io#fix_path(rootdir)
+	let lines = dig#io#readdir(rootdir)
 	call s:open(rootdir, lines, v:false, v:false)
 endfunction
 
-function! near#close() abort
-	if s:is_near()
-		" Does not close the Near window if here is CmdLineWindow.
+function! dig#close() abort
+	if s:is_dig()
+		" Does not close the dig window if here is CmdLineWindow.
 		if ':' != getcmdtype()
 			close
-			if 0 < win_id2win(t:near['prev_winid'])
-				execute printf('%dwincmd w', win_id2win(t:near['prev_winid']))
+			if 0 < win_id2win(t:dig['prev_winid'])
+				execute printf('%dwincmd w', win_id2win(t:dig['prev_winid']))
 			endif
 			call s:configure(v:true)
 		endif
 	endif
 endfunction
 
-function! near#search() abort
-	if s:is_near()
-		if t:near['is_driveletters']
-			call near#io#error('Can not search under the driveletters.')
+function! dig#search() abort
+	if s:is_dig()
+		if t:dig['is_driveletters']
+			call dig#io#error('Can not search under the driveletters.')
 		else
 			let pattern = s:input_search_param('pattern', { v -> !empty(v) }, 'Please type a filename pattern!', '')
 			if empty(pattern)
@@ -47,16 +47,16 @@ function! near#search() abort
 			if empty(maxdepth)
 				return
 			endif
-			let rootdir = t:near['rootdir']
+			let rootdir = t:dig['rootdir']
 			setlocal noreadonly modified
 			call clearmatches()
 			call matchadd('Search', '\c' .. pattern[0])
 			call s:set_statusline()
 			silent! call deletebufline('%', 1, '$')
 			redraw
-			call near#io#search(rootdir, rootdir, pattern[0], str2nr(maxdepth[0]), 1, 1)
+			call dig#io#search(rootdir, rootdir, pattern[0], str2nr(maxdepth[0]), 1, 1)
 			setlocal buftype=nofile readonly nomodified nobuflisted
-			let t:near['is_searchresult'] = v:true
+			let t:dig['is_searchresult'] = v:true
 			call s:set_statusline()
 			echohl Title
 			echo 'Search has completed!'
@@ -65,41 +65,41 @@ function! near#search() abort
 	endif
 endfunction
 
-function! near#select_file(line) abort
-	if s:is_near()
-		let path = near#io#fix_path((t:near['is_driveletters'] ? '' : (t:near['rootdir'] .. '/')) .. a:line)
+function! dig#select_file(line) abort
+	if s:is_dig()
+		let path = dig#io#fix_path((t:dig['is_driveletters'] ? '' : (t:dig['rootdir'] .. '/')) .. a:line)
 		if filereadable(path)
-			call near#close()
+			call dig#close()
 			if -1 == bufnr(path)
 				execute printf('edit %s', escape(path, '#\ '))
 			else
 				execute printf('buffer %d', bufnr(path))
 			endif
 		elseif isdirectory(path)
-			call near#open(path)
+			call dig#open(path)
 		endif
 	endif
 endfunction
 
-function! near#updir() abort
-	if s:is_near()
-		if t:near['is_searchresult']
-			if empty(t:near['rootdir'])
-				call s:open(t:near['rootdir'], near#io#driveletters(), v:true, v:false)
+function! dig#updir() abort
+	if s:is_dig()
+		if t:dig['is_searchresult']
+			if empty(t:dig['rootdir'])
+				call s:open(t:dig['rootdir'], dig#io#driveletters(), v:true, v:false)
 			else
-				let lines = near#io#readdir(t:near['rootdir'])
-				call s:open(t:near['rootdir'], lines, v:false, v:false)
+				let lines = dig#io#readdir(t:dig['rootdir'])
+				call s:open(t:dig['rootdir'], lines, v:false, v:false)
 			endif
-		elseif t:near['is_driveletters']
+		elseif t:dig['is_driveletters']
 			" nop
 		else
-			let curdir = fnamemodify(t:near['rootdir'], ':p:h')
-			if -1 != index(near#io#driveletters(), curdir)
-				call s:open('', near#io#driveletters(), v:true, v:false)
+			let curdir = fnamemodify(t:dig['rootdir'], ':p:h')
+			if -1 != index(dig#io#driveletters(), curdir)
+				call s:open('', dig#io#driveletters(), v:true, v:false)
 				let pattern = curdir
 			else
 				let updir = fnamemodify(curdir, ':h')
-				call near#open(updir)
+				call dig#open(updir)
 				let pattern = fnamemodify(curdir, ':t') .. '/'
 			endif
 			call search('^' .. pattern .. '$')
@@ -108,31 +108,31 @@ function! near#updir() abort
 	endif
 endfunction
 
-function! near#change_dir() abort
-	if s:is_near()
-		let rootdir = t:near['rootdir']
+function! dig#change_dir() abort
+	if s:is_dig()
+		let rootdir = t:dig['rootdir']
 		let view = winsaveview()
-		call near#close()
+		call dig#close()
 		lcd `=rootdir`
-		call near#open(rootdir)
+		call dig#open(rootdir)
 		call winrestview(view)
 	endif
 endfunction
 
-function! near#explorer() abort
-	if s:is_near()
+function! dig#explorer() abort
+	if s:is_dig()
 		if has('win32')
-			let rootdir = fnamemodify(t:near['rootdir'], ':p')
-			call near#close()
+			let rootdir = fnamemodify(t:dig['rootdir'], ':p')
+			call dig#close()
 			execute '!start ' .. rootdir
 		endif
 	endif
 endfunction
 
-function! near#terminal() abort
-	if s:is_near()
-		let rootdir = t:near['rootdir']
-		call near#close()
+function! dig#terminal() abort
+	if s:is_dig()
+		let rootdir = t:dig['rootdir']
+		call dig#close()
 		if has('nvim')
 			new
 			call termopen(&shell, { 'cwd' : rootdir })
@@ -143,18 +143,17 @@ function! near#terminal() abort
 	endif
 endfunction
 
-function! near#help() abort
-	if s:is_near()
+function! dig#help() abort
+	if s:is_dig()
 		let xs = [
-			\ ['Enter', 'Open a file or a directory under the cursor.'],
-			\ ['Space', 'Open a file or a directory under the cursor.'],
-			\ ['Esc', 'Close the Near window.'],
+			\ ['Enter/Space', 'Open a file or a directory under the cursor.'],
+			\ ['Esc', 'Close the dig window.'],
 			\ ['T', 'Open a terminal window.'],
 			\ ['S', 'Search a file by filename pattern matching.'],
 			\ ['E', 'Open a explorer.exe. (Windows OS only)'],
 			\ ['L', 'Open a file or a directory under the cursor.'],
 			\ ['H', 'Go up to parent directory.'],
-			\ ['C', 'Change the current directory to the Near''s directory.'],
+			\ ['C', 'Set the current directory to the dig''s directory.'],
 			\ ['~', 'Change the current directory to Home directory.'],
 			\ ['?', 'Print this help.'],
 			\ ]
@@ -173,18 +172,18 @@ function! s:open(rootdir, lines, is_driveletters, is_searchresult) abort
 	if !empty(a:lines)
 		let pattern = ''
 		if &filetype == s:FILETYPE
-			call near#close()
+			call dig#close()
 		else
 			let pattern = fnamemodify(bufname(), ':t')
 		endif
-		let t:near = {
+		let t:dig = {
 			\ 'prev_winid' : win_getid(),
 			\ 'rootdir' : a:rootdir,
 			\ 'is_driveletters' : a:is_driveletters,
 			\ 'is_searchresult' : a:is_searchresult,
 			\ }
 		vnew
-		let t:near['near_winid'] = win_getid()
+		let t:dig['dig_winid'] = win_getid()
 		setlocal noreadonly modified nonumber
 		silent! call deletebufline('%', 1, '$')
 		call setbufline('%', 1, a:lines)
@@ -198,7 +197,7 @@ function! s:open(rootdir, lines, is_driveletters, is_searchresult) abort
 			call feedkeys('zz', 'nx')
 		endif
 	else
-		call near#io#error(printf('There are no files or directories in "%s".', a:rootdir))
+		call dig#io#error(printf('There are no files or directories in "%s".', a:rootdir))
 	endif
 endfunction
 
@@ -206,22 +205,22 @@ function! s:set_statusline() abort
 	let &l:statusline = printf('[%s] %%l/%%L ', s:FILETYPE)
 endfunction
 
-function! s:is_near() abort
+function! s:is_dig() abort
 	call s:configure(v:false)
-	return (t:near['near_winid'] == win_getid()) && (&filetype == s:FILETYPE)
+	return (t:dig['dig_winid'] == win_getid()) && (&filetype == s:FILETYPE)
 endfunction
 
 function! s:configure(force_init) abort
 	if a:force_init
-		let t:near = {}
+		let t:dig = {}
 	else
-		let t:near = get(t:, 'near', {})
+		let t:dig = get(t:, 'dig', {})
 	endif
-	let t:near['near_winid'] = get(t:near, 'near_winid', -1)
-	let t:near['prev_winid'] = get(t:near, 'prev_winid', -1)
-	let t:near['rootdir'] = get(t:near, 'rootdir', '.')
-	let t:near['is_driveletters'] = get(t:near, 'is_driveletters', v:false)
-	let t:near['is_searchresult'] = get(t:near, 'is_searchresult', v:false)
+	let t:dig['dig_winid'] = get(t:dig, 'dig_winid', -1)
+	let t:dig['prev_winid'] = get(t:dig, 'prev_winid', -1)
+	let t:dig['rootdir'] = get(t:dig, 'rootdir', '.')
+	let t:dig['is_driveletters'] = get(t:dig, 'is_driveletters', v:false)
+	let t:dig['is_searchresult'] = get(t:dig, 'is_searchresult', v:false)
 endfunction
 
 function! s:input_search_param(name, chk_cb, errmsg, default) abort
@@ -232,7 +231,7 @@ function! s:input_search_param(name, chk_cb, errmsg, default) abort
 		return [v]
 	else
 		echo ' '
-		call near#io#error(a:errmsg)
+		call dig#io#error(a:errmsg)
 		return []
 	endif
 endfunction

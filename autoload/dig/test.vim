@@ -1,7 +1,7 @@
 
 let s:TEST_LOG = expand('<sfile>:h:h:h:gs?\?/?') . '/test.log'
 
-function! near#test#run() abort
+function! dig#test#run() abort
 	let saved_wildignore = &wildignore
 	try
 		if filereadable(s:TEST_LOG)
@@ -15,30 +15,30 @@ function! near#test#run() abort
 
 		call assert_equal(
 			\ sort(['.git/', '.github/', 'LICENSE', 'autoload/', 'doc/', 'plugin/', 'syntax/']),
-			\ sort(near#io#readdir('.')))
+			\ sort(dig#io#readdir('.')))
 		call assert_equal(
-			\ sort(['near.vim', 'near/']),
-			\ sort(near#io#readdir('./autoload')))
+			\ sort(['dig.vim', 'dig/']),
+			\ sort(dig#io#readdir('./autoload')))
 		call assert_equal(
 			\ sort(['io.vim', 'test.vim']),
-			\ sort(near#io#readdir('./autoload/near')))
+			\ sort(dig#io#readdir('./autoload/dig')))
 		call assert_equal(
-			\ sort(['near.vim']),
-			\ sort(near#io#readdir('./plugin')))
+			\ sort(['dig.vim']),
+			\ sort(dig#io#readdir('./plugin')))
 		call assert_equal(
-			\ sort(['near.vim']),
-			\ sort(near#io#readdir('./syntax')))
+			\ sort(['dig.vim']),
+			\ sort(dig#io#readdir('./syntax')))
 		call assert_equal(
 			\ sort(['workflows/']),
-			\ sort(near#io#readdir('./.github')))
+			\ sort(dig#io#readdir('./.github')))
 		call assert_equal(
 			\ sort(['neovim.yml', 'vim.yml']),
-			\ sort(near#io#readdir('./.github/workflows')))
+			\ sort(dig#io#readdir('./.github/workflows')))
 
 		if !empty(v:errors)
 			call writefile(v:errors, s:TEST_LOG)
 			for err in v:errors
-				call near#io#error(err)
+				call dig#io#error(err)
 			endfor
 		endif
 	finally
