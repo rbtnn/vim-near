@@ -71,7 +71,7 @@ function! dig#open_bookmark(n) abort
 		let path = expand(path)
 		if filereadable(path)
 			call dig#close()
-			if -1 == bufnr(path)
+			if (-1 == bufnr(path)) || (fnamemodify(path, ':t') != fnamemodify(bufname(bufnr(path)), ':t'))
 				execute printf('edit %s', escape(path, '#\ '))
 			else
 				execute printf('buffer %d', bufnr(path))
@@ -91,7 +91,7 @@ function! dig#select_file(line) abort
 			let path = dig#io#fix_path((t:dig['is_driveletters'] ? '' : (t:dig['rootdir'] .. '/')) .. a:line)
 			if filereadable(path)
 				call dig#close()
-				if -1 == bufnr(path)
+				if (-1 == bufnr(path)) || (fnamemodify(path, ':t') != fnamemodify(bufname(bufnr(path)), ':t'))
 					execute printf('edit %s', escape(path, '#\ '))
 				else
 					execute printf('buffer %d', bufnr(path))
