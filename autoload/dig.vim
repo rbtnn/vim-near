@@ -196,7 +196,7 @@ function! dig#help() abort
 			\ ['C', 'Set the current directory to the dig''s directory.'],
 			\ ['D', 'Show git-diff. (execuable git only)'],
 			\ ['E', 'Open a explorer.exe. (Windows OS only)'],
-			\ ['G', 'Go to the git root directory.'],
+			\ ['R', 'Go to the git root directory.'],
 			\ ['H', 'Go up to parent directory.'],
 			\ ['S', 'Search a file by filename pattern matching.'],
 			\ ['T', 'Open a terminal window.'],

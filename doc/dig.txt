@@ -42,7 +42,7 @@ Keymappings                                                  *dig-keymappings*
 	C       : Set the current directory to the Dig's directory.
 	D       : Show git-diff. (execuable git only).
 	E       : Open a explorer.exe. (Windows OS only).
-	G       : Go to the git root directory.
+	R       : Go to the git root directory.
 	H       : Go up to parent directory.
 	S       : Search a file by filename pattern matching.
 		  NOTE: It does not depend on |'ignorecase'|.
