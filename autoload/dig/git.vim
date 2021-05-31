@@ -2,14 +2,16 @@
 let s:NUMSTAT_HEAD = 12
 let s:info_caches = {}
 let s:args_caches = {}
+let s:git_diff_args_prev = {}
 
 function! dig#git#diff(path) abort
+	let toplevel = dig#git#rootdir(a:path)
 	let args = []
 	echohl Title
-	let args = split(input('git-diff arguments>', ''), '\s\+')
+	let s:git_diff_args_prev[toplevel] = input('git-diff arguments>', get(s:git_diff_args_prev, toplevel, ''))
+	let args = split(s:git_diff_args_prev[toplevel], '\s\+')
 	echohl None
 	redraw
-	let toplevel = dig#git#rootdir(a:path)
 	let dict = {}
 	let cmd = ['git', '--no-pager', 'diff', '--numstat'] + args
 	if isdirectory(toplevel)
