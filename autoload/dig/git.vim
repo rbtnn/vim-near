@@ -44,17 +44,9 @@ function! dig#git#show_diff(toplevel, line) abort
 	let info = s:info_caches[a:toplevel][(a:line)[(s:NUMSTAT_HEAD):]]
 	let args = s:args_caches[a:toplevel]
 	let cmd = s:build_cmd(args, info['path'])
-	let lines = s:system(cmd, a:toplevel, v:false)
-
 	call dig#close()
-	new
-	silent! call deletebufline('%', 1, '$')
-	call setbufline('%', 1, lines)
-	setlocal readonly nomodifiable buftype=nofile nocursorline
-	let &l:filetype = 'diff'
-	let &l:statusline = join(cmd)
+	call s:new_diff_window(s:system(cmd, a:toplevel, v:false), cmd)
 	let fullpath = s:expand2fullpath(a:toplevel .. '/' .. info['path'])
-
 	execute printf('nnoremap <buffer><silent><nowait><space>    :<C-w>call <SID>jump_diff(%s)<cr>', string(fullpath))
 	execute printf('nnoremap <buffer><silent><nowait><cr>       :<C-w>call <SID>jump_diff(%s)<cr>', string(fullpath))
 	execute printf('nnoremap <buffer><silent><nowait>R          :<C-w>call <SID>rediff(%s, %s, %s)<cr>', string(a:toplevel), string(args), string(fullpath))
@@ -148,8 +140,20 @@ endfunction
 function! s:rediff(toplevel, args, fullpath) abort
 	let view = winsaveview()
 	let cmd = s:build_cmd(a:args, a:fullpath)
-	call s:new_window(s:system(cmd, a:toplevel, v:false), 'diff', cmd)
+	call s:new_diff_window(s:system(cmd, a:toplevel, v:false), cmd)
 	call winrestview(view)
+endfunction
+
+function! s:new_diff_window(lines, cmd) abort
+	if 'diff' != &filetype
+		new
+	endif
+	setlocal noreadonly modifiable
+	silent! call deletebufline('%', 1, '$')
+	call setbufline('%', 1, a:lines)
+	setlocal readonly nomodifiable buftype=nofile nocursorline
+	let &l:filetype = 'diff'
+	let &l:statusline = join(a:cmd)
 endfunction
 
 function! s:jump_diff(fullpath) abort
