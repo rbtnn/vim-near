@@ -80,7 +80,12 @@ function! s:action_open_bookmark(n) abort
 				execute printf('buffer %d', bufnr(path))
 			endif
 		elseif isdirectory(path)
-			call s:open({ 'rootdir' : path, })
+			call s:open({
+				\ 'rootdir' : path,
+				\ 'is_searchresult' : v:false,
+				\ 'is_gitdiff' : v:false,
+				\ 'is_driveletters' : v:false,
+				\ })
 		endif
 	endif
 endfunction
@@ -277,14 +282,6 @@ function! s:open(opts) abort
 	endif
 	let rootdir = dig#io#fix_path(rootdir)
 
-	if has_key(opts, 'lines')
-		let lines = opts['lines']
-	elseif get(t:dig, 'is_searchresult', v:false) || get(t:dig, 'is_gitdiff', v:false)
-		let lines = []
-	else
-		let lines = dig#io#readdir(rootdir)
-	endif
-
 	if s:is_dig()
 		let already_opened = v:true
 	else
@@ -323,6 +320,14 @@ function! s:open(opts) abort
 			\ }
 	endif
 	let t:dig['rootdir'] = rootdir
+
+	if has_key(opts, 'lines')
+		let lines = opts['lines']
+	elseif get(t:dig, 'is_searchresult', v:false) || get(t:dig, 'is_gitdiff', v:false)
+		let lines = []
+	else
+		let lines = dig#io#readdir(rootdir)
+	endif
 
 	if !empty(lines)
 		setlocal noreadonly modified nonumber

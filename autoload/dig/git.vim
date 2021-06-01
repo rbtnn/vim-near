@@ -218,9 +218,9 @@ function! s:open_file(path, lnum) abort
 			execute printf('%d', a:lnum)
 		else
 			if 0 < a:lnum
-				execute printf('new +%d %s', a:lnum, fnameescape(fullpath))
+				execute printf('leftabove vnew +%d %s', a:lnum, fnameescape(fullpath))
 			else
-				execute printf('new %s', fnameescape(fullpath))
+				execute printf('leftabove vnew %s', fnameescape(fullpath))
 			endif
 		endif
 		silent! foldopen!

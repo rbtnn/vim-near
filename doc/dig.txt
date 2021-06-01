@@ -38,7 +38,6 @@ Keymappings                                                  *dig-keymappings*
 	l       : Open a file or a directory under the cursor.
 	Enter   : Open a file or a directory under the cursor.
 	Space   : Open a file or a directory under the cursor.
-	Esc     : Close the Dig window.
 	c       : Set the current directory to the Dig's directory.
 	d       : Show git-diff. (execuable git only).
 	e       : Open a explorer.exe. (Windows OS only).
