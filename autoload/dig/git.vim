@@ -1,8 +1,8 @@
 
 let s:NUMSTAT_HEAD = 12
-let s:info_caches = {}
-let s:args_caches = {}
-let s:git_diff_args_prev = {}
+let s:info_caches = get(s:, 'info_caches', {})
+let s:args_caches = get(s:, 'args_caches', {})
+let s:git_diff_args_prev = get(s:, 'git_diff_args_prev', {})
 
 function! dig#git#diff(path) abort
 	let toplevel = dig#git#rootdir(a:path)
@@ -46,10 +46,8 @@ function! dig#git#show_diff(toplevel, line) abort
 	let info = s:info_caches[a:toplevel][(a:line)[(s:NUMSTAT_HEAD):]]
 	let args = s:args_caches[a:toplevel]
 	let cmd = s:build_cmd(args, info['path'])
-	call dig#close()
 	call s:new_diff_window(s:system(cmd, a:toplevel, v:false), cmd)
 	let fullpath = s:expand2fullpath(a:toplevel .. '/' .. info['path'])
-	execute printf('nnoremap <buffer><silent><nowait><space>    :<C-w>call <SID>jump_diff(%s)<cr>', string(fullpath))
 	execute printf('nnoremap <buffer><silent><nowait><cr>       :<C-w>call <SID>jump_diff(%s)<cr>', string(fullpath))
 	execute printf('nnoremap <buffer><silent><nowait>R          :<C-w>call <SID>rediff(%s, %s, %s)<cr>', string(a:toplevel), string(args), string(fullpath))
 endfunction
@@ -147,8 +145,17 @@ function! s:rediff(toplevel, args, fullpath) abort
 endfunction
 
 function! s:new_diff_window(lines, cmd) abort
-	if 'diff' != &filetype
-		new
+	let exist = v:false
+	for n in range(1, winnr('$'))
+		if 'diff' == getwinvar(n, '&filetype', '')
+			execute n .. 'wincmd w'
+			let exist = v:true
+			break
+		endif
+	endfor
+	if !exist
+		vnew
+		wincmd L
 	endif
 	setlocal noreadonly modifiable
 	silent! call deletebufline('%', 1, '$')
