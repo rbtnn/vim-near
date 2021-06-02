@@ -48,16 +48,19 @@ endfunction
 
 
 
-
 function! s:action_search() abort
 	if s:T_DRIVELETTERS == t:dig['type']
 		call dig#io#error('Can not search under the driveletters.')
 	else
-		let pattern = s:input_search_param('pattern', { v -> !empty(v) }, 'Please type a filename pattern!', '')
+		let pattern = s:input_search_param('pattern',
+			\ { v -> !empty(v) },
+			\ 'Please type a filename pattern!', '')
 		if empty(pattern)
 			return
 		endif
-		let maxdepth = s:input_search_param('max-depth', { v -> v =~# '^\d\+$' }, 'Please type a number as max-depth!', '3')
+		let maxdepth = s:input_search_param('max-depth',
+			\ { v -> v =~# '^\d\+$' },
+			\ 'Please type a number as max-depth!', '3')
 		if empty(maxdepth)
 			return
 		endif
@@ -82,11 +85,7 @@ function! s:action_open_bookmark(n) abort
 		let path = expand(path)
 		if filereadable(path)
 			call s:goto_prevwin()
-			if (-1 == bufnr(path)) || (fnamemodify(path, ':t') != fnamemodify(bufname(bufnr(path)), ':t'))
-				execute printf('edit %s', escape(path, '#\ '))
-			else
-				execute printf('buffer %d', bufnr(path))
-			endif
+			call s:edit_file(path)
 		elseif isdirectory(path)
 			call s:open(s:T_NORMAL, {
 				\ 'rootdir' : path,
@@ -107,11 +106,7 @@ function! s:action_select_file(line) abort
 		let path = dig#io#fix_path(t:dig['rootdir'] .. '/' .. a:line)
 		if filereadable(path)
 			call s:goto_prevwin()
-			if (-1 == bufnr(path)) || (fnamemodify(path, ':t') != fnamemodify(bufname(bufnr(path)), ':t'))
-				execute printf('edit %s', escape(path, '#\ '))
-			else
-				execute printf('buffer %d', bufnr(path))
-			endif
+			call s:edit_file(path)
 		elseif isdirectory(path)
 			call s:open(s:T_NORMAL, {
 				\ 'rootdir' : path,
@@ -355,7 +350,9 @@ endfunction
 
 function! s:goto_prevwin() abort
 	call win_gotoid(t:dig['prev_winid'])
-	if s:is_dig() || ('terminal' == &buftype) || &modified
+	if s:is_dig()
+		rightbelow vnew
+	elseif ('terminal' == &buftype) || &modified
 		new
 	endif
 endfunction
@@ -378,6 +375,26 @@ function! s:input_search_param(name, chk_cb, errmsg, default) abort
 		echo ' '
 		call dig#io#error(a:errmsg)
 		return []
+	endif
+endfunction
+
+function! s:strict_bufnr(path) abort
+	let fname1 = fnamemodify(a:path, ':t')
+	let fname2 = fnamemodify(bufname(bufnr(a:path)), ':t')
+	let bnr = bufnr(a:path)
+	if (-1 == bnr) || (fname1 != fname2)
+		return -1
+	else
+		return bnr
+	endif
+endfunction
+
+function! s:edit_file(path) abort
+	let bnr = s:strict_bufnr(a:path)
+	if -1 == bnr
+		execute printf('edit %s', escape(a:path, '#\ '))
+	else
+		execute printf('buffer %d', bnr)
 	endif
 endfunction
 
