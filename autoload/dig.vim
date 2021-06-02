@@ -340,6 +340,10 @@ function! s:open(type, opts) abort
 			call search('^' .. pattern .. '$')
 			call feedkeys('zz', 'nx')
 		endif
+	else
+		if s:T_NORMAL == t:dig['type']
+			call dig#io#error('No file is found.')
+		endif
 	endif
 endfunction
 
