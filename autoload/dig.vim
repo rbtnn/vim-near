@@ -262,20 +262,24 @@ function! s:open(type, opts) abort
 	let prev_winid = ('diff' == &filetype) ? -1 : win_getid()
 
 	let rootdir = get(a:opts, 'rootdir', '')
-	if empty(rootdir)
-		if filereadable(bufname())
-			let rootdir = fnamemodify(bufname(), ':h')
-		else
-			let rootdir = getcwd()
-		endif
+	if s:T_DRIVELETTERS == a:type
+		let rootdir = ''
 	else
-		if isdirectory(expand(rootdir))
-			let rootdir = expand(rootdir)
+		if empty(rootdir)
+			if filereadable(bufname())
+				let rootdir = fnamemodify(bufname(), ':h')
+			else
+				let rootdir = getcwd()
+			endif
 		else
-			let rootdir = getcwd()
+			if isdirectory(expand(rootdir))
+				let rootdir = expand(rootdir)
+			else
+				let rootdir = getcwd()
+			endif
 		endif
+		let rootdir = dig#io#fix_path(rootdir)
 	endif
-	let rootdir = dig#io#fix_path(rootdir)
 
 	if s:is_dig() || dig#window#find_filetype(s:FILETYPE)
 		if (get(t:dig, 'dig_winid', -1) != prev_winid) && (-1 != prev_winid)
@@ -293,13 +297,15 @@ function! s:open(type, opts) abort
 
 	wincmd H
 
+	" Change the rootdir and can not open a file
+	" because searchresult's path is a relative path.
 	if s:T_SEARCHRESULT != t:dig['type']
 		let t:dig['rootdir'] = rootdir
 	endif
 
 	if has_key(a:opts, 'lines')
 		let lines = a:opts['lines']
-	elseif (s:T_SEARCHRESULT == t:dig['type']) || (s:T_GITDIFF == t:dig['type'])
+	elseif s:T_NORMAL != t:dig['type']
 		let lines = []
 	else
 		let lines = dig#io#readdir(rootdir)
