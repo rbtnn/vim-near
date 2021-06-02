@@ -3,9 +3,7 @@ let g:loaded_dig = 1
 
 command! -complete=dir -nargs=* Dig :call dig#open(<q-args>)
 
-if get(g:, 'dig_default_mappings_enabled', v:true)
-	nnoremap <silent><nowait><space>     :<C-u>Dig<cr>
-endif
+nnoremap <silent><nowait><space>     :<C-u>Dig<cr>
 
 augroup dig
 	autocmd!

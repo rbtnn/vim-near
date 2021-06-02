@@ -1,8 +1,16 @@
 
 let s:FILETYPE = 'dig'
 
+let s:T_NORMAL = 'normal'
+let s:T_DRIVELETTERS = 'driveletters'
+let s:T_SEARCHRESULT = 'searchresult'
+let s:T_GITDIFF = 'gitdiff'
+
 function! dig#open(q_args) abort
-	call s:open({ 'rootdir' : a:q_args, })
+	let t:dig = get(t:, 'dig', {})
+	call s:open(get(t:dig, 'type', s:T_NORMAL), {
+		\ 'rootdir' : a:q_args,
+		\ })
 endfunction
 
 function! dig#action(name, ...) abort
@@ -29,9 +37,7 @@ function! dig#action(name, ...) abort
 		elseif 'help' == a:name
 			call s:action_help()
 		else
-			echohl Error
-			echo 'Unknown action name: ' .. string(a:name)
-			echohl None
+			call dig#io#error('Unknown action name: ' .. string(a:name))
 		endif
 	endif
 endfunction
@@ -40,7 +46,7 @@ endfunction
 
 
 function! s:action_search() abort
-	if t:dig['is_driveletters']
+	if s:T_DRIVELETTERS == t:dig['type']
 		call dig#io#error('Can not search under the driveletters.')
 	else
 		let pattern = s:input_search_param('pattern', { v -> !empty(v) }, 'Please type a filename pattern!', '')
@@ -52,6 +58,7 @@ function! s:action_search() abort
 			return
 		endif
 		let rootdir = t:dig['rootdir']
+		let t:dig['type'] = s:T_SEARCHRESULT
 		setlocal noreadonly modified
 		call clearmatches(win_getid())
 		call matchadd('Search', '\c' .. pattern[0])
@@ -60,7 +67,6 @@ function! s:action_search() abort
 		redraw
 		call dig#io#search(rootdir, rootdir, pattern[0], str2nr(maxdepth[0]), 1, 1)
 		setlocal buftype=nofile readonly nomodified nobuflisted
-		let t:dig['is_searchresult'] = v:true
 		call s:set_statusline()
 		echohl Title
 		echo 'Search has completed!'
@@ -80,24 +86,20 @@ function! s:action_open_bookmark(n) abort
 				execute printf('buffer %d', bufnr(path))
 			endif
 		elseif isdirectory(path)
-			call s:open({
+			call s:open(s:T_NORMAL, {
 				\ 'rootdir' : path,
-				\ 'is_searchresult' : v:false,
-				\ 'is_gitdiff' : v:false,
-				\ 'is_driveletters' : v:false,
 				\ })
 		endif
 	endif
 endfunction
 
 function! s:action_select_file(line) abort
-	if t:dig['is_gitdiff']
+	if s:T_GITDIFF == t:dig['type']
 		let rootdir = dig#git#rootdir(fnamemodify(t:dig['rootdir'], ':p'))
 		call dig#git#show_diff(rootdir, getline('.'))
-	elseif t:dig['is_driveletters']
-		call s:open({
+	elseif s:T_DRIVELETTERS == t:dig['type']
+		call s:open(s:T_NORMAL, {
 			\ 'rootdir' : a:line,
-			\ 'is_driveletters' : v:false,
 			\ })
 	else
 		let path = dig#io#fix_path(t:dig['rootdir'] .. '/' .. a:line)
@@ -108,45 +110,39 @@ function! s:action_select_file(line) abort
 			else
 				execute printf('buffer %d', bufnr(path))
 			endif
-			let t:dig['is_driveletters'] = v:false
 		elseif isdirectory(path)
-			call s:open({ 'rootdir' : path, })
+			call s:open(s:T_NORMAL, {
+				\ 'rootdir' : path,
+				\ })
 		endif
 	endif
 endfunction
 
 function! s:action_updir() abort
-	if t:dig['is_searchresult'] || t:dig['is_gitdiff']
+	if (s:T_SEARCHRESULT == t:dig['type']) || (s:T_GITDIFF == t:dig['type'])
 		if empty(t:dig['rootdir'])
-			call s:open({
+			call s:open(s:T_DRIVELETTERS, {
 				\ 'rootdir' : t:dig['rootdir'],
 				\ 'lines' : dig#io#driveletters(),
-				\ 'is_driveletters' : v:true,
-				\ 'is_searchresult' : v:false,
-				\ 'is_gitdiff' : v:false,
 				\ })
 		else
-			call s:open({
+			call s:open(s:T_NORMAL,{
 				\ 'rootdir' : t:dig['rootdir'],
 				\ 'lines' : dig#io#readdir(t:dig['rootdir']),
-				\ 'is_driveletters' : v:false,
-				\ 'is_searchresult' : v:false,
-				\ 'is_gitdiff' : v:false,
 				\ })
 		endif
-	elseif t:dig['is_driveletters']
+	elseif s:T_DRIVELETTERS == t:dig['type']
 		" nop
 	else
 		let curdir = fnamemodify(t:dig['rootdir'], ':p:h')
 		if -1 != index(dig#io#driveletters(), curdir)
-			call s:open({
+			call s:open(s:T_DRIVELETTERS, {
 				\ 'lines' : dig#io#driveletters(),
-				\ 'is_driveletters' : v:true,
 				\ })
 			let pattern = curdir
 		else
 			let updir = fnamemodify(curdir, ':h')
-			call s:open({
+			call s:open(s:T_NORMAL, {
 				\ 'rootdir' : updir,
 				\ })
 			let pattern = fnamemodify(curdir, ':t') .. '/'
@@ -160,7 +156,7 @@ function! s:action_change_dir() abort
 	let rootdir = t:dig['rootdir']
 	let view = winsaveview()
 	lcd `=rootdir`
-	call s:open({
+	call s:open(s:T_NORMAL, {
 		\ 'rootdir' : rootdir,
 		\ })
 	call winrestview(view)
@@ -180,10 +176,9 @@ function! s:action_git_diff() abort
 		if empty(lines)
 			call dig#io#error('Not a git repository or no modified files.')
 		else
-			call s:open({
+			call s:open(s:T_GITDIFF, {
 				\ 'rootdir' : rootdir,
 				\ 'lines' : lines,
-				\ 'is_gitdiff' : v:true,
 				\ })
 			setlocal noreadonly modified
 			call clearmatches(win_getid())
@@ -206,7 +201,7 @@ function! s:action_goto_gitrootdir() abort
 		let rootdir = dig#git#rootdir(fnamemodify(t:dig['rootdir'], ':p'))
 		let view = winsaveview()
 		lcd `=rootdir`
-		call s:open({
+		call s:open(s:T_NORMAL, {
 			\ 'rootdir' : rootdir,
 			\ })
 		call winrestview(view)
@@ -259,11 +254,10 @@ function! s:action_help() abort
 	endfor
 endfunction
 
-function! s:open(opts) abort
+function! s:open(type, opts) abort
 	let opts = a:opts
 	let pattern = ''
 	let prev_winid = ('diff' == &filetype) ? -1 : win_getid()
-	let t:dig = get(t:, 'dig', {})
 	let already_opened = v:false
 
 	let rootdir = get(opts, 'rootdir', '')
@@ -299,31 +293,22 @@ function! s:open(opts) abort
 		if (get(t:dig, 'dig_winid', -1) != prev_winid) && (-1 != prev_winid)
 			let t:dig['prev_winid'] = prev_winid
 		endif
-		if has_key(opts, 'is_driveletters')
-			let t:dig['is_driveletters'] = opts['is_driveletters']
-		endif
-		if has_key(opts, 'is_searchresult')
-			let t:dig['is_searchresult'] = opts['is_searchresult']
-		endif
-		if has_key(opts, 'is_gitdiff')
-			let t:dig['is_gitdiff'] = opts['is_gitdiff']
-		endif
 	else
 		vnew
 		wincmd H
 		let t:dig = {
 			\ 'dig_winid' : win_getid(),
 			\ 'prev_winid' : prev_winid,
-			\ 'is_driveletters' : get(opts, 'is_driveletters', v:false),
-			\ 'is_searchresult' : get(opts, 'is_searchresult', v:false),
-			\ 'is_gitdiff' : get(opts, 'is_gitdiff', v:false),
 			\ }
 	endif
-	let t:dig['rootdir'] = rootdir
+	let t:dig['type'] = a:type
+	if s:T_SEARCHRESULT != t:dig['type']
+		let t:dig['rootdir'] = rootdir
+	endif
 
 	if has_key(opts, 'lines')
 		let lines = opts['lines']
-	elseif get(t:dig, 'is_searchresult', v:false) || get(t:dig, 'is_gitdiff', v:false)
+	elseif (s:T_SEARCHRESULT == t:dig['type']) || (s:T_GITDIFF == t:dig['type'])
 		let lines = []
 	else
 		let lines = dig#io#readdir(rootdir)
@@ -334,9 +319,8 @@ function! s:open(opts) abort
 		silent! call deletebufline('%', 1, '$')
 		call setbufline('%', 1, lines)
 		let width = max(map(copy(lines), { _,x -> strdisplaywidth(x) })) + 1
-		let maxwidth = get(g:, 'dig_maxwidth', 0)
-		if (0 < maxwidth) && (maxwidth < width)
-			let width = maxwidth
+		if width < 16
+			let width = 16
 		endif
 		execute printf('vertical resize %d', width)
 		setlocal winfixwidth buftype=nofile readonly nomodified nobuflisted
@@ -357,7 +341,7 @@ function! s:goto_prevwin() abort
 endfunction
 
 function! s:set_statusline() abort
-	let &l:statusline = printf('[%s] %%l/%%L ', s:FILETYPE)
+	let &l:statusline = printf('[%s:%s] %%l/%%L ', s:FILETYPE, t:dig['type'])
 endfunction
 
 function! s:is_dig() abort
