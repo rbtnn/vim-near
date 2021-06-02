@@ -1,6 +1,7 @@
 
 let s:NUMSTAT_HEAD = 12
 let s:info_caches = get(s:, 'info_caches', {})
+let s:keys_caches = get(s:, 'keys_caches', {})
 let s:args_caches = get(s:, 'args_caches', {})
 let s:git_diff_args_prev = get(s:, 'git_diff_args_prev', {})
 
@@ -20,22 +21,25 @@ function! dig#git#diff(path) abort
 			if !empty(m)
 				let key = m[3]
 				if !has_key(dict, key)
-					let dict[key] = { 'additions' : m[1], 'deletions' : m[2], 'path' : key, }
+					let dict[key] = {
+						\ 'additions' : m[1],
+						\ 'deletions' : m[2],
+						\ 'name' : fnamemodify(key, ':t'),
+						\ 'fullpath' : s:expand2fullpath(toplevel .. '/' .. key),
+						\ }
 				endif
 			endif
 		endfor
-		let lines = map(keys(dict), { i,key ->
-			\ printf('%5s %5s %s', '+' .. dict[key]['additions'], '-' .. dict[key]['deletions'], key)
-			\ })
-		call sort(lines, { x,y ->
-			\ x[(s:NUMSTAT_HEAD):] == y[(s:NUMSTAT_HEAD):]
-			\ ? 0
-			\ : x[(s:NUMSTAT_HEAD):] > y[(s:NUMSTAT_HEAD):]
-			\   ? 1
-			\   : -1
+		let ks = sort(keys(dict))
+		let lines = map(deepcopy(ks), { i,key ->
+			\ printf('%5s %5s %s',
+			\ '+' .. dict[key]['additions'],
+			\ '-' .. dict[key]['deletions'],
+			\ dict[key]['name'])
 			\ })
 		let s:args_caches[toplevel] = args
 		let s:info_caches[toplevel] = dict
+		let s:keys_caches[toplevel] = ks
 		return lines
 	else
 		return []
@@ -43,11 +47,11 @@ function! dig#git#diff(path) abort
 endfunction
 
 function! dig#git#show_diff(toplevel, line) abort
-	let info = s:info_caches[a:toplevel][(a:line)[(s:NUMSTAT_HEAD):]]
+	let key = s:keys_caches[a:toplevel][line('.') - 1]
+	let fullpath = s:info_caches[a:toplevel][key]['fullpath']
 	let args = s:args_caches[a:toplevel]
-	let cmd = s:build_cmd(args, info['path'])
+	let cmd = s:build_cmd(args, fullpath)
 	call s:new_diff_window(s:system(cmd, a:toplevel, v:false), cmd)
-	let fullpath = s:expand2fullpath(a:toplevel .. '/' .. info['path'])
 	execute printf('nnoremap <buffer><silent><nowait><space>    :<C-w>call dig#open(%s)<cr>', string(t:dig['rootdir']))
 	execute printf('nnoremap <buffer><silent><nowait><cr>       :<C-w>call <SID>jump_diff(%s)<cr>', string(fullpath))
 	execute printf('nnoremap <buffer><silent><nowait>R          :<C-w>call <SID>rediff(%s, %s, %s)<cr>', string(a:toplevel), string(args), string(fullpath))
@@ -157,7 +161,9 @@ function! s:new_diff_window(lines, cmd) abort
 	if !exist
 		vnew
 	endif
+
 	wincmd L
+
 	setlocal noreadonly modifiable
 	silent! call deletebufline('%', 1, '$')
 	call setbufline('%', 1, a:lines)

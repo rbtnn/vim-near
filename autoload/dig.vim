@@ -66,12 +66,10 @@ function! s:action_search() abort
 		setlocal noreadonly modified
 		call clearmatches(win_getid())
 		call matchadd('Search', '\c' .. pattern[0])
-		call s:set_statusline()
 		silent! call deletebufline('%', 1, '$')
 		redraw
 		call dig#io#search(rootdir, rootdir, pattern[0], str2nr(maxdepth[0]), 1, 1)
 		setlocal buftype=nofile readonly nomodified nobuflisted
-		call s:set_statusline()
 		echohl Title
 		echo 'Search has completed!'
 		echohl None
@@ -303,15 +301,18 @@ function! s:open(type, opts) abort
 		if (get(t:dig, 'dig_winid', -1) != prev_winid) && (-1 != prev_winid)
 			let t:dig['prev_winid'] = prev_winid
 		endif
+		let t:dig['type'] = a:type
 	else
 		vnew
-		wincmd H
 		let t:dig = {
+			\ 'type' : s:T_NORMAL,
 			\ 'dig_winid' : win_getid(),
 			\ 'prev_winid' : prev_winid,
 			\ }
 	endif
-	let t:dig['type'] = a:type
+
+	wincmd H
+
 	if s:T_SEARCHRESULT != t:dig['type']
 		let t:dig['rootdir'] = rootdir
 	endif
@@ -328,12 +329,7 @@ function! s:open(type, opts) abort
 		setlocal noreadonly modified nonumber
 		silent! call deletebufline('%', 1, '$')
 		call setbufline('%', 1, lines)
-		let width = max(map(copy(lines), { _,x -> strdisplaywidth(x) })) + 1
-		if width < 16
-			let width = 16
-		endif
-		execute printf('vertical resize %d', width)
-		setlocal winfixwidth buftype=nofile readonly nomodified nobuflisted
+		setlocal buftype=nofile readonly nomodified nobuflisted
 		let &l:filetype = s:FILETYPE
 		call s:set_statusline()
 		if !empty(pattern)
@@ -345,17 +341,27 @@ function! s:open(type, opts) abort
 			call dig#io#error('No file is found.')
 		endif
 	endif
+	call s:adjust_winwidth()
+endfunction
+
+function! s:adjust_winwidth() abort
+	let width = max(map(getbufline('%', 1, '$'), { _,x -> strdisplaywidth(x) })) + 1
+	if width < 16
+		let width = 16
+	endif
+	execute printf('vertical resize %d', width)
+	setlocal winfixwidth
 endfunction
 
 function! s:goto_prevwin() abort
 	call win_gotoid(t:dig['prev_winid'])
-	if s:is_dig()
-		rightbelow vnew
+	if s:is_dig() || ('terminal' == &buftype) || &modified
+		new
 	endif
 endfunction
 
 function! s:set_statusline() abort
-	let &l:statusline = printf('[%s:%s] %%l/%%L ', s:FILETYPE, t:dig['type'])
+	let &l:statusline = printf('[%s:%%{t:dig["type"]}] %%l/%%L', s:FILETYPE)
 endfunction
 
 function! s:is_dig() abort
