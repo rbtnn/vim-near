@@ -85,7 +85,7 @@ function! s:action_open_bookmark(n) abort
 		let path = expand(path)
 		if filereadable(path)
 			call s:goto_prevwin()
-			call s:edit_file(path)
+			call dig#window#open(path, -1)
 		elseif isdirectory(path)
 			call s:open(s:T_NORMAL, {
 				\ 'rootdir' : path,
@@ -106,7 +106,7 @@ function! s:action_select_file(line) abort
 		let path = dig#io#fix_path(t:dig['rootdir'] .. '/' .. a:line)
 		if filereadable(path)
 			call s:goto_prevwin()
-			call s:edit_file(path)
+			call dig#window#open(path, -1)
 		elseif isdirectory(path)
 			call s:open(s:T_NORMAL, {
 				\ 'rootdir' : path,
@@ -258,12 +258,10 @@ endfunction
 
 
 function! s:open(type, opts) abort
-	let opts = a:opts
-	let pattern = ''
+	let pattern = s:is_dig() ? '' : fnamemodify(bufname(), ':t')
 	let prev_winid = ('diff' == &filetype) ? -1 : win_getid()
-	let already_opened = v:false
 
-	let rootdir = get(opts, 'rootdir', '')
+	let rootdir = get(a:opts, 'rootdir', '')
 	if empty(rootdir)
 		if filereadable(bufname())
 			let rootdir = fnamemodify(bufname(), ':h')
@@ -279,20 +277,7 @@ function! s:open(type, opts) abort
 	endif
 	let rootdir = dig#io#fix_path(rootdir)
 
-	if s:is_dig()
-		let already_opened = v:true
-	else
-		let pattern = fnamemodify(bufname(), ':t')
-		for n in range(1, winnr('$'))
-			if s:FILETYPE == getwinvar(n, '&filetype', '')
-				execute n .. 'wincmd w'
-				let already_opened = v:true
-				break
-			endif
-		endfor
-	endif
-
-	if already_opened
+	if s:is_dig() || dig#window#find_filetype(s:FILETYPE)
 		if (get(t:dig, 'dig_winid', -1) != prev_winid) && (-1 != prev_winid)
 			let t:dig['prev_winid'] = prev_winid
 		endif
@@ -312,8 +297,8 @@ function! s:open(type, opts) abort
 		let t:dig['rootdir'] = rootdir
 	endif
 
-	if has_key(opts, 'lines')
-		let lines = opts['lines']
+	if has_key(a:opts, 'lines')
+		let lines = a:opts['lines']
 	elseif (s:T_SEARCHRESULT == t:dig['type']) || (s:T_GITDIFF == t:dig['type'])
 		let lines = []
 	else
@@ -336,6 +321,7 @@ function! s:open(type, opts) abort
 			call dig#io#error('No file is found.')
 		endif
 	endif
+
 	call s:adjust_winwidth()
 endfunction
 
@@ -375,26 +361,6 @@ function! s:input_search_param(name, chk_cb, errmsg, default) abort
 		echo ' '
 		call dig#io#error(a:errmsg)
 		return []
-	endif
-endfunction
-
-function! s:strict_bufnr(path) abort
-	let fname1 = fnamemodify(a:path, ':t')
-	let fname2 = fnamemodify(bufname(bufnr(a:path)), ':t')
-	let bnr = bufnr(a:path)
-	if (-1 == bnr) || (fname1 != fname2)
-		return -1
-	else
-		return bnr
-	endif
-endfunction
-
-function! s:edit_file(path) abort
-	let bnr = s:strict_bufnr(a:path)
-	if -1 == bnr
-		execute printf('edit %s', escape(a:path, '#\ '))
-	else
-		execute printf('buffer %d', bnr)
 	endif
 endfunction
 

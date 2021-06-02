@@ -150,15 +150,7 @@ function! s:rediff(toplevel, args, fullpath) abort
 endfunction
 
 function! s:new_diff_window(lines, cmd) abort
-	let exist = v:false
-	for n in range(1, winnr('$'))
-		if 'diff' == getwinvar(n, '&filetype', '')
-			execute n .. 'wincmd w'
-			let exist = v:true
-			break
-		endif
-	endfor
-	if !exist
+	if !dig#window#find_filetype('diff')
 		vnew
 	endif
 
@@ -198,7 +190,17 @@ function! s:jump_diff(fullpath) abort
 		if !empty(m)
 			for i in [1, 3, 5]
 				if '+' == m[i]
-					call s:open_file(a:fullpath, m[i + 1] + n1 + n3)
+					if filereadable(a:fullpath)
+						let lnum = m[i + 1] + n1 + n3
+						if dig#window#find_path(a:fullpath)
+							execute printf('%d', lnum)
+						else
+							leftabove vnew
+							call dig#window#open(a:fullpath, lnum)
+						endif
+						silent! foldopen!
+						normal! zz
+					endif
 					let ok = v:true
 					break
 				endif
@@ -207,34 +209,6 @@ function! s:jump_diff(fullpath) abort
 	endif
 	if !ok
 		call dig#io#error('Can not jump this!')
-	endif
-endfunction
-
-function! s:open_file(path, lnum) abort
-	if filereadable(a:path)
-		let fullpath = s:expand2fullpath(a:path)
-		let b = 0
-		for x in filter(getwininfo(), { i,x -> x['tabnr'] == tabpagenr() })
-			if s:expand2fullpath(bufname(x['bufnr'])) is fullpath
-				execute x['winnr'] .. 'wincmd w'
-				let b = 1
-				break
-			endif
-		endfor
-		if b
-			execute printf('%d', a:lnum)
-		else
-			if 0 < a:lnum
-				execute printf('leftabove vnew +%d %s', a:lnum, fnameescape(fullpath))
-			else
-				execute printf('leftabove vnew %s', fnameescape(fullpath))
-			endif
-		endif
-		silent! foldopen!
-		normal! zz
-		return 1
-	else
-		return 0
 	endif
 endfunction
 
