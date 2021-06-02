@@ -6,6 +6,8 @@ let s:T_DRIVELETTERS = 'driveletters'
 let s:T_SEARCHRESULT = 'searchresult'
 let s:T_GITDIFF = 'gitdiff'
 
+
+
 function! dig#open(q_args) abort
 	let t:dig = get(t:, 'dig', {})
 	call s:open(get(t:dig, 'type', s:T_NORMAL), {
@@ -20,7 +22,7 @@ function! dig#action(name, ...) abort
 			call s:action_select_file(param)
 		elseif 'git_diff' == a:name
 			call s:action_git_diff()
-		elseif 'change_gitrootdir' == a:name
+		elseif 'goto_gitrootdir' == a:name
 			call s:action_goto_gitrootdir()
 		elseif 'terminal' == a:name
 			call s:action_terminal()
@@ -36,6 +38,8 @@ function! dig#action(name, ...) abort
 			call s:action_change_dir()
 		elseif 'help' == a:name
 			call s:action_help()
+		elseif 'home' == a:name
+			call s:action_home()
 		else
 			call dig#io#error('Unknown action name: ' .. string(a:name))
 		endif
@@ -220,6 +224,10 @@ function! s:action_terminal() abort
 	endif
 endfunction
 
+function! s:action_home() abort
+	call dig#open('~')
+endfunction
+
 function! s:action_help() abort
 	let xs = [
 		\ ['l/Enter/Space', 'Open a file or a directory under the cursor.'],
@@ -253,6 +261,8 @@ function! s:action_help() abort
 		echon x[1]
 	endfor
 endfunction
+
+
 
 function! s:open(type, opts) abort
 	let opts = a:opts

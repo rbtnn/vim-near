@@ -10,7 +10,7 @@ augroup dig
 	autocmd FileType dig  :nnoremap <buffer><silent><cr>      :<C-u>call dig#action('select_file', getline('.'))<cr>
 	autocmd FileType dig  :nnoremap <buffer><silent><space>   :<C-u>call dig#action('select_file', getline('.'))<cr>
 	autocmd FileType dig  :nnoremap <buffer><silent>d         :<C-u>call dig#action('git_diff')<cr>
-	autocmd FileType dig  :nnoremap <buffer><silent>r         :<C-u>call dig#action('change_gitrootdir')<cr>
+	autocmd FileType dig  :nnoremap <buffer><silent>r         :<C-u>call dig#action('goto_gitrootdir')<cr>
 	autocmd FileType dig  :nnoremap <buffer><silent>t         :<C-u>call dig#action('terminal')<cr>
 	autocmd FileType dig  :nnoremap <buffer><silent>e         :<C-u>call dig#action('explorer')<cr>
 	autocmd FileType dig  :nnoremap <buffer><silent>s         :<C-u>call dig#action('search')<cr>
@@ -26,7 +26,7 @@ augroup dig
 	autocmd FileType dig  :nnoremap <buffer><silent>9         :<C-u>call dig#action('open_bookmark', 9)<cr>
 	autocmd FileType dig  :nnoremap <buffer><silent>l         :<C-u>call dig#action('select_file', getline('.'))<cr>
 	autocmd FileType dig  :nnoremap <buffer><silent>c         :<C-u>call dig#action('change_dir')<cr>
-	autocmd FileType dig  :nnoremap <buffer><silent>~         :<C-u>call dig#open('~')<cr>
+	autocmd FileType dig  :nnoremap <buffer><silent>~         :<C-u>call dig#action('home')<cr>
 	autocmd FileType dig  :nnoremap <buffer><silent>?         :<C-u>call dig#action('help')<cr>
 	autocmd FileType dig  :nnoremap <buffer><silent><C-o>     <nop>
 	autocmd FileType dig  :nnoremap <buffer><silent><C-i>     <nop>
