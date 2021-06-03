@@ -70,7 +70,7 @@ function! dig#git#rootdir(path) abort
 endfunction
 
 function! s:expand2fullpath(path) abort
-	return substitute(substitute(resolve(fnamemodify(a:path, ':p')), '\', '/', 'g'), '/\+', '/', 'g')
+	return dig#io#fix_path(resolve(fnamemodify(a:path, ':p')))
 endfunction
 
 function! s:system(cmd, toplevel, is_git_output) abort

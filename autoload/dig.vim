@@ -281,11 +281,18 @@ function! s:open(type, opts) abort
 		let rootdir = dig#io#fix_path(rootdir)
 	endif
 
-	if s:is_dig() || dig#window#find_filetype(s:FILETYPE)
+	if s:is_dig()
 		if (get(t:dig, 'dig_winid', -1) != prev_winid) && (-1 != prev_winid)
 			let t:dig['prev_winid'] = prev_winid
 		endif
 		let t:dig['type'] = a:type
+	elseif dig#window#find_filetype(s:FILETYPE)
+		if (get(t:dig, 'dig_winid', -1) != prev_winid) && (-1 != prev_winid)
+			let t:dig['prev_winid'] = prev_winid
+		endif
+		let t:dig['type'] = a:type
+		" Does not change the rootdir if dig window is already opened.
+		let rootdir = t:dig['rootdir']
 	else
 		vnew
 		let t:dig = {
