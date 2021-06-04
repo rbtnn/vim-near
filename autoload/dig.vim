@@ -32,8 +32,6 @@ function! dig#action(name, ...) abort
 			call s:action_search()
 		elseif 'updir' == a:name
 			call s:action_updir()
-		elseif 'open_bookmark' == a:name
-			call s:action_open_bookmark(param)
 		elseif 'help' == a:name
 			call s:action_help()
 		elseif 'home' == a:name
@@ -74,21 +72,6 @@ function! s:action_search() abort
 		echohl Title
 		echo 'Search has completed!'
 		echohl None
-	endif
-endfunction
-
-function! s:action_open_bookmark(n) abort
-	let path = get(get(g:, 'dig_bookmarks', {}), a:n, '')
-	if !empty(path)
-		let path = expand(path)
-		if filereadable(path)
-			call s:goto_prevwin()
-			call dig#window#open(path, -1)
-		elseif isdirectory(path)
-			call s:open(s:T_NORMAL, {
-				\ 'rootdir' : path,
-				\ })
-		endif
 	endif
 endfunction
 
@@ -217,21 +200,9 @@ function! s:action_help() abort
 		\ ['e', 'Open a explorer.exe. (Windows OS only)'],
 		\ ['r', 'Go to the git root directory.'],
 		\ ['h', 'Go up to parent directory.'],
-		\ ['s', 'Search a file by filename pattern matching.'],
+		\ ['s', 'Search files by filename pattern matching.'],
 		\ ['t', 'Open a terminal window.'],
 		\ ['~', 'Go to Home directory.'],
-		\ ]
-	for n in range(1, 9)
-		let path = get(get(g:, 'dig_bookmarks', {}), n, '')
-		if !empty(path)
-			if filereadable(expand(path)) || isdirectory(expand(path))
-				let xs += [
-					\ [n, printf('Open "%s".', path)],
-					\ ]
-			endif
-		endif
-	endfor
-	let xs += [
 		\ ['?', 'Print this help.'],
 		\ ]
 	for x in xs

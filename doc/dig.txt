@@ -40,7 +40,7 @@ Keymappings                                                  *dig-keymappings*
 	e            : Open a explorer.exe. (Windows OS only).
 	r            : Go to the git root directory.
 	h            : Go up to parent directory.
-	s            : Search a file by filename pattern matching.
+	s            : Search files by filename pattern matching.
 			  NOTE: It does not depend on |'ignorecase'|.
 	t            : Open a terminal window.
 	~            : Go to Home directory.
