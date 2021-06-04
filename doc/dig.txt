@@ -35,19 +35,16 @@ Commands                                                        *dig-commands*
 ==============================================================================
 Keymappings                                                  *dig-keymappings*
 
-	l       : Open a file or a directory under the cursor.
-	Enter   : Open a file or a directory under the cursor.
-	Space   : Open a file or a directory under the cursor.
-	c       : Set the current directory to the Dig's directory.
-	d       : Show git-diff. (execuable git only).
-	e       : Open a explorer.exe. (Windows OS only).
-	r       : Go to the git root directory.
-	h       : Go up to parent directory.
-	s       : Search a file by filename pattern matching.
-		  NOTE: It does not depend on |'ignorecase'|.
-	t       : Open a terminal window.
-	~       : Go to Home directory.
-	?       : Print help.
+	l/Enter/Space: Open a file or a directory under the cursor.
+	d            : Show git-diff.
+	e            : Open a explorer.exe. (Windows OS only).
+	r            : Go to the git root directory.
+	h            : Go up to parent directory.
+	s            : Search a file by filename pattern matching.
+			  NOTE: It does not depend on |'ignorecase'|.
+	t            : Open a terminal window.
+	~            : Go to Home directory.
+	?            : Print help.
 
 
 

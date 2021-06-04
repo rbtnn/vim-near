@@ -34,8 +34,6 @@ function! dig#action(name, ...) abort
 			call s:action_updir()
 		elseif 'open_bookmark' == a:name
 			call s:action_open_bookmark(param)
-		elseif 'change_dir' == a:name
-			call s:action_change_dir()
 		elseif 'help' == a:name
 			call s:action_help()
 		elseif 'home' == a:name
@@ -149,16 +147,6 @@ function! s:action_updir() abort
 	endif
 endfunction
 
-function! s:action_change_dir() abort
-	let rootdir = t:dig['rootdir']
-	let view = winsaveview()
-	lcd `=rootdir`
-	call s:open(s:T_NORMAL, {
-		\ 'rootdir' : rootdir,
-		\ })
-	call winrestview(view)
-endfunction
-
 function! s:action_explorer() abort
 	if has('win32')
 		let rootdir = fnamemodify(t:dig['rootdir'], ':p')
@@ -225,8 +213,7 @@ function! s:action_help() abort
 	let xs = [
 		\ ['l/Enter/Space', 'Open a file or a directory under the cursor.'],
 		\ ['Esc', 'Close the dig window.'],
-		\ ['c', 'Set the current directory to the dig''s directory.'],
-		\ ['d', 'Show git-diff. (execuable git only)'],
+		\ ['d', 'Show git-diff.'],
 		\ ['e', 'Open a explorer.exe. (Windows OS only)'],
 		\ ['r', 'Go to the git root directory.'],
 		\ ['h', 'Go up to parent directory.'],
