@@ -151,10 +151,8 @@ endfunction
 
 function! s:new_diff_window(lines, cmd) abort
 	if !dig#window#find_filetype('diff')
-		vnew
+		call dig#window#new()
 	endif
-
-	wincmd L
 
 	setlocal noreadonly modifiable
 	silent! call deletebufline('%', 1, '$')
@@ -195,7 +193,7 @@ function! s:jump_diff(fullpath) abort
 						if dig#window#find_path(a:fullpath)
 							execute printf('%d', lnum)
 						else
-							leftabove vnew
+							call dig#window#new()
 							call dig#window#open(a:fullpath, lnum)
 						endif
 						silent! foldopen!

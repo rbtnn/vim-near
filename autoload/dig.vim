@@ -86,7 +86,7 @@ function! s:action_select_file(line) abort
 	else
 		let path = dig#io#fix_path(t:dig['rootdir'] .. '/' .. a:line)
 		if filereadable(path)
-			call s:goto_prevwin()
+			call s:goto_prevwin(v:true)
 			call dig#window#open(path, -1)
 		elseif isdirectory(path)
 			call s:open(s:T_NORMAL, {
@@ -177,10 +177,10 @@ function! s:action_goto_gitrootdir() abort
 endfunction
 
 function! s:action_terminal() abort
-	call s:goto_prevwin()
+	call s:goto_prevwin(v:false)
 	let rootdir = t:dig['rootdir']
 	if has('nvim')
-		new
+		call dig#window#new()
 		call termopen(&shell, { 'cwd' : rootdir })
 		startinsert
 	else
@@ -252,7 +252,7 @@ function! s:open(type, opts) abort
 		" Does not change the rootdir if dig window is already opened.
 		let rootdir = t:dig['rootdir']
 	else
-		vnew
+		call dig#window#new()
 		let t:dig = {
 			\ 'type' : s:T_NORMAL,
 			\ 'dig_winid' : win_getid(),
@@ -260,7 +260,7 @@ function! s:open(type, opts) abort
 			\ }
 	endif
 
-	wincmd H
+	wincmd K
 
 	" Change the rootdir and can not open a file
 	" because searchresult's path is a relative path.
@@ -293,24 +293,20 @@ function! s:open(type, opts) abort
 		endif
 	endif
 
-	call s:adjust_winwidth()
+	call s:adjust_winheight()
 endfunction
 
-function! s:adjust_winwidth() abort
-	let width = max(map(getbufline('%', 1, '$'), { _,x -> strdisplaywidth(x) })) + 1
-	if width < 16
-		let width = 16
-	endif
-	execute printf('vertical resize %d', width)
-	setlocal winfixwidth
+function! s:adjust_winheight() abort
+	resize 10
+	setlocal winfixheight
 endfunction
 
-function! s:goto_prevwin() abort
+function! s:goto_prevwin(p) abort
 	call win_gotoid(t:dig['prev_winid'])
-	if s:is_dig()
-		rightbelow vnew
-	elseif ('terminal' == &buftype) || &modified
-		new
+	if a:p
+		if s:is_dig() || ('terminal' == &buftype) || &modified
+			call dig#window#new()
+		endif
 	endif
 endfunction
 

@@ -1,4 +1,8 @@
 
+function! dig#window#new() abort
+	belowright new
+endfunction
+
 function! dig#window#find_filetype(ft) abort
 	for n in range(1, winnr('$'))
 		if a:ft == getwinvar(n, '&filetype', '')
