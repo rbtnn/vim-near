@@ -52,7 +52,7 @@ function! dig#git#show_diff(toplevel, line) abort
 	let args = s:args_caches[a:toplevel]
 	let cmd = s:build_cmd(args, fullpath)
 	call s:new_diff_window(s:system(cmd, a:toplevel, v:false), cmd)
-	execute printf('nnoremap <buffer><silent><nowait><space>    :<C-w>call dig#open(%s)<cr>', string(t:dig['rootdir']))
+	execute printf('nnoremap <buffer><silent><nowait><space>    :<C-w>call <SID>jump_diff(%s)<cr>', string(fullpath))
 	execute printf('nnoremap <buffer><silent><nowait><cr>       :<C-w>call <SID>jump_diff(%s)<cr>', string(fullpath))
 	execute printf('nnoremap <buffer><silent><nowait>R          :<C-w>call <SID>rediff(%s, %s, %s)<cr>', string(a:toplevel), string(args), string(fullpath))
 endfunction

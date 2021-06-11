@@ -1,6 +1,6 @@
 
 function! dig#window#new() abort
-	belowright new
+	new
 endfunction
 
 function! dig#window#find_filetype(ft) abort
