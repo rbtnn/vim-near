@@ -23,6 +23,7 @@ function! dig#open(q_args) abort
 	endif
 
 	let winid = popup_menu(lines, {
+		\ 'padding' : [],
 		\ 'minwidth' : 40,
 		\ 'minheight' : 5,
 		\ 'maxheight' : 20,
@@ -31,6 +32,12 @@ function! dig#open(q_args) abort
 	call s:file_setopts(winid, rootdir)
 
 	call win_execute(winid, 'setfiletype ' .. s:FILETYPE)
+
+	let i = index(lines, expand('%:t'))
+	if -1 != i
+		call win_execute(winid, printf('call setpos(".", [0, %d, 1, 0])', i + 1))
+		call win_execute(winid, 'redraw')
+	endif
 endfunction
 
 
@@ -57,10 +64,11 @@ function! s:file_filter(rootdir, winid, key) abort
 					call dig#io#error('No modified files.')
 				else
 					call popup_settext(a:winid, lines)
+					call win_execute(a:winid, 'redraw')
 					call s:diff_setopts(a:winid, a:rootdir)
 				endif
 			catch /^Vim:Interrupt$/
-				let interrupts = v:true
+				" nop
 			endtry
 		endif
 		return 1
