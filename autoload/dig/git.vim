@@ -46,15 +46,15 @@ function! dig#git#diff(path) abort
 	endif
 endfunction
 
-function! dig#git#show_diff(toplevel, line) abort
-	let key = s:keys_caches[a:toplevel][line('.') - 1]
-	let fullpath = s:info_caches[a:toplevel][key]['fullpath']
-	let args = s:args_caches[a:toplevel]
+function! dig#git#show_diff(rootdir, lnum) abort
+	let toplevel = dig#git#rootdir(a:rootdir)
+	let key = s:keys_caches[toplevel][(a:lnum - 1)]
+	let fullpath = s:info_caches[toplevel][key]['fullpath']
+	let args = s:args_caches[toplevel]
 	let cmd = s:build_cmd(args, fullpath)
-	call s:new_diff_window(s:system(cmd, a:toplevel, v:false), cmd)
-	execute printf('nnoremap <buffer><silent><nowait><space>    :<C-w>call <SID>jump_diff(%s)<cr>', string(fullpath))
+	call s:new_diff_window(s:system(cmd, toplevel, v:false), cmd)
 	execute printf('nnoremap <buffer><silent><nowait><cr>       :<C-w>call <SID>jump_diff(%s)<cr>', string(fullpath))
-	execute printf('nnoremap <buffer><silent><nowait>R          :<C-w>call <SID>rediff(%s, %s, %s)<cr>', string(a:toplevel), string(args), string(fullpath))
+	execute printf('nnoremap <buffer><silent><nowait>R          :<C-w>call <SID>rediff(%s, %s, %s)<cr>', string(toplevel), string(args), string(fullpath))
 endfunction
 
 function! dig#git#rootdir(path) abort

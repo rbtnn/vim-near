@@ -26,46 +26,38 @@ function! dig#open(q_args) abort
 		\ 'minwidth' : 40,
 		\ 'minheight' : 5,
 		\ 'maxheight' : 20,
-		\ 'filter' : function('s:filter', [rootdir]),
-		\ 'callback' : function('s:callback', [rootdir]),
 		\ })
+
+	call s:file_setopts(winid, rootdir)
 
 	call win_execute(winid, 'setfiletype ' .. s:FILETYPE)
 endfunction
 
-function! s:adjust_winheight() abort
-	resize 10
-	setlocal winfixheight
+
+
+function! s:file_setopts(winid, rootdir) abort
+	call popup_setoptions(a:winid, {
+		\ 'title' : s:FILETYPE .. '(file)',
+		\ 'filter' : function('s:file_filter', [(a:rootdir)]),
+		\ 'callback' : function('s:file_callback', [(a:rootdir)]),
+		\ })
 endfunction
 
-function! s:filter(rootdir, winid, key) abort
+function! s:file_filter(rootdir, winid, key) abort
 	if char2nr('d') == char2nr(a:key)
 		let toplevel = dig#git#rootdir(a:rootdir)
-		if executable('git') && !empty(toplevel)
+		if !executable('git')
+			call dig#io#error('git is not executable')
+		elseif empty(toplevel)
+			call dig#io#error('Not a git repository')
+		else
 			try
 				let lines = dig#git#diff(fnamemodify(a:rootdir, ':p'))
 				if empty(lines)
-					call dig#io#error('Not a git repository or no modified files.')
+					call dig#io#error('No modified files.')
 				else
-					call popup_close(a:winid)
-					call dig#window#new()
-					call s:adjust_winheight()
-					setlocal noreadonly modified nonumber
-					silent! call deletebufline('%', 1, '$')
-					call setbufline('%', 1, lines)
-					setlocal buftype=nofile readonly nomodified nobuflisted
-					call clearmatches(win_getid())
-					if hlexists('diffAdded')
-						call matchadd('diffAdded', '+\d\+')
-					elseif hlexists('DiffAdd')
-						call matchadd('DiffAdd', '+\d\+')
-					endif
-					if hlexists('diffRemoved')
-						call matchadd('diffRemoved',   '-\d\+')
-					elseif hlexists('DiffDelete')
-						call matchadd('DiffDelete',   '-\d\+')
-					endif
-					execute printf('nnoremap <buffer><cr>   :<C-u>call dig#git#show_diff(%s, line("."))<cr>', string(toplevel))
+					call popup_settext(a:winid, lines)
+					call s:diff_setopts(a:winid, a:rootdir)
 				endif
 			catch /^Vim:Interrupt$/
 				let interrupts = v:true
@@ -78,10 +70,19 @@ function! s:filter(rootdir, winid, key) abort
 		call term_start(&shell, { 'cwd' : a:rootdir, 'term_finish' : 'close' })
 		return 1
 
+	elseif char2nr('c') == char2nr(a:key)
+		lcd `=a:rootdir`
+		echohl Title
+		echo printf('Change the current directory to "%s" in the current window.', getcwd())
+		echohl None
+		return 1
+
 	elseif char2nr('e') == char2nr(a:key)
 		if has('win32')
 			call popup_close(a:winid)
 			execute '!start ' .. fnamemodify(a:rootdir, ':p')
+		else
+			call dig#io#error('error')
 		endif
 		return 1
 
@@ -101,7 +102,7 @@ function! s:filter(rootdir, winid, key) abort
 	endif
 endfunction
 
-function! s:callback(rootdir, winid, key) abort
+function! s:file_callback(rootdir, winid, key) abort
 	let lines = getbufline(winbufnr(a:winid), 1, '$')
 	if 0 < a:key
 		if empty(a:rootdir)
@@ -112,8 +113,42 @@ function! s:callback(rootdir, winid, key) abort
 		if isdirectory(path)
 			call dig#open(path)
 		elseif filereadable(path)
-			call dig#window#open(path, -1)
+			if &modified
+				call dig#io#error('the current buffer is modified.')
+			else
+				call dig#window#open(path, -1)
+			endif
 		endif
+	endif
+endfunction
+
+
+
+function! s:diff_setopts(winid, rootdir) abort
+	call popup_setoptions(a:winid, {
+		\ 'title' : s:FILETYPE .. '(git-diff)',
+		\ 'filter' : function('s:diff_filter', [(a:rootdir)]),
+		\ 'callback' : function('s:diff_callback', [(a:rootdir)]),
+		\ })
+endfunction
+
+function! s:diff_filter(rootdir, winid, key) abort
+	if char2nr('h') == char2nr(a:key)
+		call popup_close(a:winid)
+		call dig#open(a:rootdir)
+		return 1
+
+	elseif char2nr('l') == char2nr(a:key)
+		return popup_filter_menu(a:winid, "\<cr>")
+
+	else
+		return popup_filter_menu(a:winid, a:key)
+	endif
+endfunction
+
+function! s:diff_callback(rootdir, winid, key) abort
+	if 0 < a:key
+		call dig#git#show_diff(a:rootdir, a:key - 1)
 	endif
 endfunction
 
