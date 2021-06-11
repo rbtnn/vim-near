@@ -22,7 +22,10 @@ function! dig#io#fix_path(path) abort
 endfunction
 
 function! dig#io#readdir(path) abort
-	return map(s:readdir(a:path), { i,x -> isdirectory(a:path .. '/' .. x) ? x .. '/' : x })
+	let xs = s:readdir(a:path)
+	call filter(xs, { i,x -> !empty(expand(a:path .. '/' .. x)) })
+	call map(xs, { i,x -> isdirectory(a:path .. '/' .. x) ? x .. '/' : x })
+	return xs
 endfunction
 
 function! s:readdir(path) abort

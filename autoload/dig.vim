@@ -29,6 +29,7 @@ function! dig#open(q_args) abort
 		\ 'filter' : function('s:filter', [rootdir]),
 		\ 'callback' : function('s:callback', [rootdir]),
 		\ })
+
 	call win_execute(winid, 'setfiletype ' .. s:FILETYPE)
 endfunction
 
@@ -38,9 +39,7 @@ function! s:adjust_winheight() abort
 endfunction
 
 function! s:filter(rootdir, winid, key) abort
-	let n = char2nr(a:key)
-
-	if char2nr('d') == n
+	if char2nr('d') == char2nr(a:key)
 		let toplevel = dig#git#rootdir(a:rootdir)
 		if executable('git') && !empty(toplevel)
 			try
@@ -74,26 +73,26 @@ function! s:filter(rootdir, winid, key) abort
 		endif
 		return 1
 
-	elseif char2nr('t') == n
+	elseif char2nr('t') == char2nr(a:key)
 		call popup_close(a:winid)
 		call term_start(&shell, { 'cwd' : a:rootdir, 'term_finish' : 'close' })
 		return 1
 
-	elseif char2nr('e') == n
+	elseif char2nr('e') == char2nr(a:key)
 		if has('win32')
 			call popup_close(a:winid)
 			execute '!start ' .. fnamemodify(a:rootdir, ':p')
 		endif
 		return 1
 
-	elseif char2nr('h') == n
+	elseif char2nr('h') == char2nr(a:key)
 		if !has('win32') || !empty(a:rootdir)
 			call popup_close(a:winid)
 			call dig#open(a:rootdir .. '/..')
 		endif
 		return 1
 
-	elseif char2nr('l') == n
+	elseif char2nr('l') == char2nr(a:key)
 		return popup_filter_menu(a:winid, "\<cr>")
 
 	else
