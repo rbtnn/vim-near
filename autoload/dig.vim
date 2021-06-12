@@ -73,6 +73,21 @@ function! s:file_filter(rootdir, winid, key) abort
 		endif
 		return 1
 
+	elseif char2nr('~') == char2nr(a:key)
+		call popup_close(a:winid)
+		call dig#open(expand('~'))
+		return 1
+
+	elseif char2nr('g') == char2nr(a:key)
+		call win_execute(a:winid, printf('call setpos(".", [0, %d, 1, 0])', 1))
+		call win_execute(a:winid, 'redraw')
+		return 1
+
+	elseif char2nr('G') == char2nr(a:key)
+		call win_execute(a:winid, printf('call setpos(".", [0, %d, 1, 0])', line('$', a:winid)))
+		call win_execute(a:winid, 'redraw')
+		return 1
+
 	elseif char2nr('t') == char2nr(a:key)
 		call popup_close(a:winid)
 		call term_start(&shell, { 'cwd' : a:rootdir, 'term_finish' : 'close' })
