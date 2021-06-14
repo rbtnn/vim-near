@@ -171,7 +171,7 @@ endfunction
 
 function! s:diff_callback(rootdir, winid, key) abort
 	if 0 < a:key
-		call dig#git#show_diff(a:rootdir, a:key - 1)
+		call dig#git#show_diff(a:rootdir, a:key)
 	endif
 endfunction
 
