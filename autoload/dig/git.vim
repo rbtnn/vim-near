@@ -16,7 +16,7 @@ function! dig#git#diff(path) abort
 	let dict = {}
 	let cmd = ['git', '--no-pager', 'diff', '--numstat'] + args
 	if isdirectory(toplevel)
-		for line in s:system(cmd, toplevel, v:true)
+		for line in dig#system#system_for_git(cmd, toplevel, v:true)
 			let m = matchlist(line, '^\s*\(\d\+\)\s\+\(\d\+\)\s\+\(.*\)$')
 			if !empty(m)
 				let key = m[3]
@@ -52,7 +52,7 @@ function! dig#git#show_diff(rootdir, lnum) abort
 	let fullpath = s:info_caches[toplevel][key]['fullpath']
 	let args = s:args_caches[toplevel]
 	let cmd = s:build_cmd(args, fullpath)
-	call s:new_diff_window(s:system(cmd, toplevel, v:false), cmd)
+	call s:new_diff_window(dig#system#system_for_git(cmd, toplevel, v:false), cmd)
 	execute printf('nnoremap <buffer><silent><nowait><cr>       :<C-w>call <SID>jump_diff(%s)<cr>', string(fullpath))
 	execute printf('nnoremap <buffer><silent><nowait>R          :<C-w>call <SID>rediff(%s, %s, %s)<cr>', string(toplevel), string(args), string(fullpath))
 endfunction
@@ -73,71 +73,6 @@ function! s:expand2fullpath(path) abort
 	return dig#io#fix_path(resolve(fnamemodify(a:path, ':p')))
 endfunction
 
-function! s:system(cmd, toplevel, is_git_output) abort
-	let lines = []
-	if exists('*job_start')
-		let path = tempname()
-		try
-			let job = job_start(a:cmd, {
-				\ 'cwd' : a:toplevel,
-				\ 'out_io' : 'file',
-				\ 'out_name' : path,
-				\ })
-			while 'run' == job_status(job)
-			endwhile
-			if filereadable(path)
-				let lines = readfile(path)
-			endif
-		finally
-			if filereadable(path)
-				call delete(path)
-			endif
-		endtry
-	else
-		let saved = getcwd()
-		try
-			lcd `=a:toplevel`
-			let lines = split(system(join(a:cmd)), "\n")
-		finally
-			lcd `=saved`
-		endtry
-	endif
-
-	let enc_from = ''
-	for i in range(0, len(lines) - 1)
-		if a:is_git_output
-			let lines[i] = s:iconv(lines[i], 'utf-8')
-		else
-			" The encoding of top 4 lines('diff -...', 'index ...', '--- a/...', '+++ b/...') is always utf-8.
-			if i < 4
-				let lines[i] = s:iconv(lines[i], 'utf-8')
-			else
-				" check if the line contains a multibyte-character.
-				if 0 < len(filter(split(lines[i], '\zs'), {i,x -> 0x80 < char2nr(x) }))
-					if empty(enc_from)
-						if dig#sillyiconv#utf_8(lines[i])
-							let enc_from = 'utf-8'
-						else
-							let enc_from = 'shift_jis'
-						endif
-					endif
-					let lines[i] = s:iconv(lines[i], enc_from)
-				endif
-			endif
-		endif
-	endfor
-
-	return lines
-endfunction
-
-function! s:iconv(text, from) abort
-	if a:from != &encoding
-		return iconv(a:text, a:from, &encoding)
-	else
-		return a:text
-	endif
-endfunction
-
 function! s:build_cmd(args, fullpath) abort
 	return ['git', '--no-pager', 'diff'] + a:args + ['--', a:fullpath]
 endfunction
@@ -145,7 +80,7 @@ endfunction
 function! s:rediff(toplevel, args, fullpath) abort
 	let view = winsaveview()
 	let cmd = s:build_cmd(a:args, a:fullpath)
-	call s:new_diff_window(s:system(cmd, a:toplevel, v:false), cmd)
+	call s:new_diff_window(dig#system#system_for_git(cmd, a:toplevel, v:false), cmd)
 	call winrestview(view)
 endfunction
 

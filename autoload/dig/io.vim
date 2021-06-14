@@ -31,7 +31,9 @@ endfunction
 function! s:readdir(path) abort
 	let xs = []
 	try
-		if exists('*readdir')
+		if has('win32')
+			let xs = dig#system#system('cmd /c "dir /a-s /b"', a:path)
+		elseif exists('*readdir')
 			silent! let xs = readdir(a:path)
 		else
 			let saved = getcwd()
