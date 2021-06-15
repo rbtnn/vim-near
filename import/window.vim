@@ -7,7 +7,7 @@ enddef
 export def FindByFiletype(ft: string): bool
 	for n in range(1, winnr('$'))
 		if ft == getwinvar(n, '&filetype', '')
-			execute n .. 'wincmd w'
+			execute printf(':%dwincmd w', n)
 			return v:true
 		endif
 	endfor
@@ -17,7 +17,7 @@ enddef
 export def FindByPath(path: string): bool
 	for x in filter(getwininfo(), (_, x) => x['tabnr'] == tabpagenr())
 		if x['bufnr'] == s:strict_bufnr(path)
-			execute x['winnr'] .. 'wincmd w'
+			execute printf(':%dwincmd w', x['winnr'])
 			return v:true
 		endif
 	endfor
