@@ -1,11 +1,7 @@
+vim9script
+import * as dig from '../import/dig.vim'
 
-let g:loaded_dig = 1
+command! -complete=dir -nargs=* Dig  :call dig#open(<q-args>)
+command! -complete=dir -nargs=* Dig9 :vim9cmd dig.Open(<q-args>)
 
-if has('nvim')
-	finish
-endif
-
-command! -complete=dir -nargs=* Dig :call dig#open(<q-args>)
-
-nnoremap <silent><nowait><space>     :<C-u>Dig<cr>
-
+nnoremap <silent><nowait><space>     :<C-u>Dig9<cr>
