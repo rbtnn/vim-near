@@ -6,44 +6,50 @@ vim9script
 import * as gitdiff from './gitdiff.vim'
 import * as utils from './utils.vim'
 
-const FILETYPE = 'dig'
+const TYPE_FILE = 'dig(file)'
+const TYPE_DIFF = 'dig(diff)'
 
 export def OpenDigWindow(q_args: string)
 	var rootdir: string
 	var lines: list<string>
 
-	if empty(q_args)
-		if isdirectory(expand('%:h'))
-			rootdir = expand('%:h')
+	if empty(get(t:, 'dig_params', {}))
+		if empty(q_args)
+			if isdirectory(expand('%:h'))
+				rootdir = expand('%:h')
+			else
+				rootdir = '.'
+			endif
+		elseif isdirectory(q_args)
+			rootdir = q_args
 		else
 			rootdir = '.'
 		endif
-	elseif isdirectory(q_args)
-		rootdir = q_args
-	else
-		rootdir = '.'
-	endif
-	rootdir = utils.FixPath(fnamemodify(rootdir, ':p'))
+		rootdir = utils.FixPath(fnamemodify(rootdir, ':p'))
 
-	if has('win32') && (rootdir =~# '^[A-Z]:/\+\.\./$')
-		lines = utils.GetDriveLetters()
-		rootdir = ''
-	else
-		lines = utils.ReadDir(rootdir)
+		if has('win32') && (rootdir =~# '^[A-Z]:/\+\.\./$')
+			lines = utils.GetDriveLetters()
+			rootdir = ''
+		else
+			lines = utils.ReadDir(rootdir)
+		endif
 	endif
 
-	var winid: number = popup_menu(lines, {
+	var winid: number = popup_menu([], {
 		'padding': [],
 		'minwidth': 40,
 		'minheight': 5,
 		'maxheight': 20,
 		})
+	win_execute(winid, 'setfiletype dig')
 
-	s:file_setopts(winid, rootdir)
+	if empty(get(t:, 'dig_params', {}))
+		s:setopts(TYPE_FILE, winid, rootdir, lines)
+	else
+		s:setopts(t:dig_params['type'], winid, t:dig_params['rootdir'], t:dig_params['lines'])
+	endif
 
-	win_execute(winid, 'setfiletype ' .. FILETYPE)
-
-	var i = index(lines, expand('%:t'))
+	var i = index(t:dig_params['lines'], expand('%:t'))
 	if -1 != i
 		win_execute(winid, printf('call setpos(".", [0, %d, 1, 0])', i + 1))
 		win_execute(winid, 'redraw')
@@ -52,13 +58,30 @@ enddef
 
 
 
-def s:file_setopts(winid: number, rootdir: string)
-	popup_setoptions(winid, {
-		'title': FILETYPE .. '(file)',
-		'filter': function('s:file_filter', [rootdir]),
-		'callback': function('s:file_callback', [rootdir]),
-		})
+def s:setopts(type: string, winid: number, rootdir: string, lines: list<string>)
+	if type == TYPE_FILE
+		popup_setoptions(winid, {
+			'title': TYPE_FILE,
+			'filter': function('s:file_filter', [rootdir]),
+			'callback': function('s:file_callback', [rootdir]),
+			})
+	else
+		popup_setoptions(winid, {
+			'title': TYPE_DIFF,
+			'filter': function('s:diff_filter', [rootdir]),
+			'callback': function('s:diff_callback', [rootdir]),
+			})
+	endif
+	popup_settext(winid, lines)
+	win_execute(winid, 'redraw')
+	t:dig_params = {
+		'type': type,
+		'rootdir': rootdir,
+		'lines': lines,
+		}
 enddef
+
+
 
 def s:file_filter(rootdir: string, winid: number, key: string): bool
 	if char2nr('d') == char2nr(key)
@@ -73,9 +96,7 @@ def s:file_filter(rootdir: string, winid: number, key: string): bool
 				if empty(lines)
 					utils.ErrorMsg('No modified files.')
 				else
-					popup_settext(winid, lines)
-					win_execute(winid, 'redraw')
-					s:diff_setopts(winid, rootdir)
+					s:setopts(TYPE_DIFF, winid, rootdir, lines)
 				endif
 			catch /^Vim:Interrupt$/
 				# nop
@@ -85,6 +106,7 @@ def s:file_filter(rootdir: string, winid: number, key: string): bool
 
 	elseif char2nr('~') == char2nr(key)
 		popup_close(winid)
+		t:dig_params = {}
 		OpenDigWindow(expand('~'))
 		return v:true
 
@@ -120,6 +142,7 @@ def s:file_filter(rootdir: string, winid: number, key: string): bool
 	elseif char2nr('h') == char2nr(key)
 		if !has('win32') || !empty(rootdir)
 			popup_close(winid)
+			t:dig_params = {}
 			OpenDigWindow(rootdir .. '/..')
 		endif
 		return v:true
@@ -138,6 +161,7 @@ def s:file_callback(rootdir: string, winid: number, lnum: number)
 	if 0 < lnum
 		var path: string = (empty(rootdir) ? '' : rootdir .. '/') ..  lines[lnum - 1]
 		if isdirectory(path)
+			t:dig_params = {}
 			OpenDigWindow(path)
 		elseif filereadable(path)
 			if &modified
@@ -151,17 +175,10 @@ enddef
 
 
 
-def s:diff_setopts(winid: number, rootdir: string)
-	popup_setoptions(winid, {
-		'title': FILETYPE .. '(git-diff)',
-		'filter': function('s:diff_filter', [rootdir]),
-		'callback': function('s:diff_callback', [rootdir]),
-		})
-enddef
-
 def s:diff_filter(rootdir: string, winid: number, key: string): bool
 	if char2nr('h') == char2nr(key)
 		popup_close(winid)
+		t:dig_params = {}
 		OpenDigWindow(rootdir)
 		return v:true
 
