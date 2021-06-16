@@ -1,7 +1,10 @@
+if !exists(':vim9script')
+	finish
+endif
 vim9script
+
 import * as sys from './sys.vim'
-import * as io from './io.vim'
-import * as window from './window.vim'
+import * as utils from './utils.vim'
 
 const NUMSTAT_HEAD = 12
 
@@ -11,11 +14,13 @@ var s:args_caches = get(s:, 'args_caches', {})
 var s:git_diff_args_prev = get(s:, 'git_diff_args_prev', {})
 
 export def Exec(path: string): list<string>
-	var toplevel: string = s:get_rootdir(path)
-	echohl Title
-	s:git_diff_args_prev[toplevel] = input('git-diff arguments>', get(s:git_diff_args_prev, toplevel, ''))
+	var toplevel: string = GetRootDir(path)
+	if has('gui_running')
+		s:git_diff_args_prev[toplevel] = inputdialog('git-diff arguments', get(s:git_diff_args_prev, toplevel, ''))
+	else
+		s:git_diff_args_prev[toplevel] = input('git-diff arguments>', get(s:git_diff_args_prev, toplevel, ''))
+	endif
 	var args: list<string> = split(s:git_diff_args_prev[toplevel], '\s\+')
-	echohl None
 	redraw
 	var dict = {}
 	var cmd: list<string> = ['git', '--no-pager', 'diff', '--numstat'] + args
@@ -51,7 +56,7 @@ export def Exec(path: string): list<string>
 enddef
 
 export def ShowDiff(rootdir: string, lnum: number)
-	var toplevel: string = s:get_rootdir(rootdir)
+	var toplevel: string = GetRootDir(rootdir)
 	var key: string = s:keys_caches[toplevel][(lnum - 1)]
 	var fullpath: string = s:info_caches[toplevel][key]['fullpath']
 	var args: list<string> = s:args_caches[toplevel]
@@ -61,9 +66,7 @@ export def ShowDiff(rootdir: string, lnum: number)
 	execute printf('nnoremap <buffer><silent><nowait>R          :<C-w>call <SID>rediff(%s, %s, %s)<cr>', string(toplevel), string(args), string(fullpath))
 enddef
 
-
-
-def s:get_rootdir(path: string): string
+export def GetRootDir(path: string): string
 	var xs: list<string> = split(path, '[\/]')
 	var prefix: string = (has('mac') || has('linux')) ? '/' : ''
 	while !empty(xs)
@@ -75,8 +78,10 @@ def s:get_rootdir(path: string): string
 	return ''
 enddef
 
+
+
 def s:expand2fullpath(path: string): string
-	return io.FixPath(resolve(fnamemodify(path, ':p')))
+	return utils.FixPath(resolve(fnamemodify(path, ':p')))
 enddef
 
 def s:build_cmd(args: list<string>, fullpath: string): list<string>
@@ -91,8 +96,8 @@ def s:rediff(toplevel: string, args: list<string>, fullpath: string)
 enddef
 
 def s:new_diff_window(lines: list<string>, cmd: list<string>)
-	if !window.FindByFiletype('diff')
-		window.New()
+	if !utils.FindWindowByFiletype('diff')
+		utils.NewWindow()
 	endif
 	setlocal noreadonly modifiable
 	silent! call deletebufline('%', 1, '$')
@@ -130,11 +135,11 @@ def s:jump_diff(fullpath: string)
 				if '+' == m[i]
 					if filereadable(fullpath)
 						lnum = str2nr(m[i + 1]) + n1 + n3
-						if window.FindByPath(fullpath)
+						if utils.FindWindowByPath(fullpath)
 							execute printf(':%d', lnum)
 						else
-							window.New()
-							window.Open(fullpath, lnum)
+							utils.NewWindow()
+							utils.OpenFile(fullpath, lnum)
 						endif
 						silent! foldopen!
 						normal! zz
@@ -146,7 +151,7 @@ def s:jump_diff(fullpath: string)
 		endif
 	endif
 	if !ok
-		io.Error('Can not jump this!')
+		utils.ErrorMsg('Can not jump this!')
 	endif
 enddef
 

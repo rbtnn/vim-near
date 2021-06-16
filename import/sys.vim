@@ -1,8 +1,12 @@
+if !exists(':vim9script')
+	finish
+endif
 vim9script
+
 import * as sillyiconv from './sillyiconv.vim'
 
-export def System(cmd: list<string>, toplevel: string): list<string>
-	var xs = s:system(cmd, toplevel, v:false, v:false)
+export def System(cmd: list<string>, cwd: string): list<string>
+	var xs = s:system(cmd, cwd, v:false, v:false)
 	for i in range(0, len(xs) - 1)
 		if sillyiconv.IsUTF8(xs[i])
 			xs[i] = s:iconv(xs[i], 'utf-8')
@@ -13,19 +17,19 @@ export def System(cmd: list<string>, toplevel: string): list<string>
 	return xs
 enddef
 
-export def SystemForGit(cmd: list<string>, toplevel: string, is_git_output: bool): list<string>
-	return s:system(cmd, toplevel, v:true, is_git_output)
+export def SystemForGit(cmd: list<string>, cwd: string, is_git_output: bool): list<string>
+	return s:system(cmd, cwd, v:true, is_git_output)
 enddef
 
 
 
-def s:system(cmd: list<string>, toplevel: string, for_git: bool, is_git_output: bool): list<string>
+def s:system(cmd: list<string>, cwd: string, for_git: bool, is_git_output: bool): list<string>
 	var lines: list<string> = []
 	if exists('*job_start')
 		var path: string = tempname()
 		try
 			var job: job = job_start(cmd, {
-				'cwd': toplevel,
+				'cwd': cwd,
 				'out_io': 'file',
 				'out_name': path,
 				})
@@ -42,7 +46,7 @@ def s:system(cmd: list<string>, toplevel: string, for_git: bool, is_git_output: 
 	else
 		var saved: string = getcwd()
 		try
-			lcd `=toplevel`
+			lcd `=cwd`
 			lines = split(system(join(cmd)), "\n")
 		finally
 			lcd `=saved`

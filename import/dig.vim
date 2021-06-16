@@ -1,11 +1,14 @@
+if !exists(':vim9script')
+	finish
+endif
 vim9script
+
 import * as gitdiff from './gitdiff.vim'
-import * as io from './io.vim'
-import * as window from './window.vim'
+import * as utils from './utils.vim'
 
 const FILETYPE = 'dig'
 
-export def Open(q_args: string)
+export def OpenDigWindow(q_args: string)
 	var rootdir: string
 	var lines: list<string>
 
@@ -20,13 +23,13 @@ export def Open(q_args: string)
 	else
 		rootdir = '.'
 	endif
-	rootdir = io.FixPath(fnamemodify(rootdir, ':p'))
+	rootdir = utils.FixPath(fnamemodify(rootdir, ':p'))
 
 	if has('win32') && (rootdir =~# '^[A-Z]:/\+\.\./$')
-		lines = io.GetDriveLetters()
+		lines = utils.GetDriveLetters()
 		rootdir = ''
 	else
-		lines = io.ReadDir(rootdir)
+		lines = utils.ReadDir(rootdir)
 	endif
 
 	var winid: number = popup_menu(lines, {
@@ -59,16 +62,16 @@ enddef
 
 def s:file_filter(rootdir: string, winid: number, key: string): bool
 	if char2nr('d') == char2nr(key)
-		var toplevel: string = dig#git#rootdir(rootdir)
+		var toplevel: string = gitdiff.GetRootDir(rootdir)
 		if !executable('git')
-			io.Error('git is not executable')
+			utils.ErrorMsg('git is not executable')
 		elseif empty(toplevel)
-			io.Error('Not a git repository')
+			utils.ErrorMsg('Not a git repository')
 		else
 			try
 				var lines: list<string> = gitdiff.Exec(fnamemodify(rootdir, ':p'))
 				if empty(lines)
-					io.Error('No modified files.')
+					utils.ErrorMsg('No modified files.')
 				else
 					popup_settext(winid, lines)
 					win_execute(winid, 'redraw')
@@ -82,7 +85,7 @@ def s:file_filter(rootdir: string, winid: number, key: string): bool
 
 	elseif char2nr('~') == char2nr(key)
 		popup_close(winid)
-		Open(expand('~'))
+		OpenDigWindow(expand('~'))
 		return v:true
 
 	elseif char2nr('g') == char2nr(key)
@@ -102,9 +105,7 @@ def s:file_filter(rootdir: string, winid: number, key: string): bool
 
 	elseif char2nr('c') == char2nr(key)
 		lcd `=rootdir`
-		echohl Title
-		echo printf('Change the current directory to "%s" in the current window.', getcwd())
-		echohl None
+		utils.TitleMsg(printf('Change the current directory to "%s" in the current window.', getcwd()))
 		return v:true
 
 	elseif char2nr('e') == char2nr(key)
@@ -112,14 +113,14 @@ def s:file_filter(rootdir: string, winid: number, key: string): bool
 			popup_close(winid)
 			execute '!start ' .. fnamemodify(rootdir, ':p')
 		else
-			io.Error('error')
+			utils.ErrorMsg('error')
 		endif
 		return v:true
 
 	elseif char2nr('h') == char2nr(key)
 		if !has('win32') || !empty(rootdir)
 			popup_close(winid)
-			Open(rootdir .. '/..')
+			OpenDigWindow(rootdir .. '/..')
 		endif
 		return v:true
 
@@ -137,12 +138,12 @@ def s:file_callback(rootdir: string, winid: number, lnum: number)
 	if 0 < lnum
 		var path: string = (empty(rootdir) ? '' : rootdir .. '/') ..  lines[lnum - 1]
 		if isdirectory(path)
-			Open(path)
+			OpenDigWindow(path)
 		elseif filereadable(path)
 			if &modified
-				io.Error('the current buffer is modified.')
+				utils.ErrorMsg('the current buffer is modified.')
 			else
-				window.Open(path, -1)
+				utils.OpenFile(path, -1)
 			endif
 		endif
 	endif
@@ -161,7 +162,7 @@ enddef
 def s:diff_filter(rootdir: string, winid: number, key: string): bool
 	if char2nr('h') == char2nr(key)
 		popup_close(winid)
-		Open(rootdir)
+		OpenDigWindow(rootdir)
 		return v:true
 
 	elseif char2nr('l') == char2nr(key)

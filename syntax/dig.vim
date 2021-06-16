@@ -4,8 +4,8 @@ if exists("b:current_syntax")
 endif
 
 syntax match   digDir        '.*/$'
-syntax match   digAdded      '+\d\+'
-syntax match   digRemoved    '-\d\+'
+syntax match   digAdded      '\s+\d\+\s'
+syntax match   digRemoved    '\s-\d\+\s'
 
 highlight default link digDir   Directory
 

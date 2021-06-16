@@ -1,3 +1,6 @@
+if !exists(':vim9script')
+	finish
+endif
 vim9script
 
 scriptencoding utf-8
