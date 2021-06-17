@@ -10,26 +10,19 @@ const TYPE_FILE = 'dig(file)'
 const TYPE_DIFF = 'dig(diff)'
 
 export def OpenDigWindow(q_args: string)
-	var rootdir: string
+	var rootdir: string = utils.FixPath(fnamemodify(expand(q_args), ':p'))
 	var lines: list<string>
+	var reload: bool = empty(get(t:, 'dig_params', {})) || !empty(q_args)
 
-	if empty(get(t:, 'dig_params', {}))
-		if empty(q_args)
-			if isdirectory(expand('%:h'))
-				rootdir = expand('%:h')
-			else
-				rootdir = '.'
-			endif
-		elseif isdirectory(q_args)
-			rootdir = q_args
-		else
-			rootdir = '.'
-		endif
-		rootdir = utils.FixPath(fnamemodify(rootdir, ':p'))
+	if !isdirectory(rootdir)
+		return
+	endif
 
-		if has('win32') && (rootdir =~# '^[A-Z]:/\+\.\./$')
-			lines = utils.GetDriveLetters()
+	if reload
+		t:dig_params = {}
+		if has('win32') && (rootdir =~# '^[A-Z]:/\+\.\./\?$')
 			rootdir = ''
+			lines = utils.GetDriveLetters()
 		else
 			lines = utils.ReadDir(rootdir)
 		endif
@@ -43,7 +36,7 @@ export def OpenDigWindow(q_args: string)
 		})
 	win_execute(winid, 'setfiletype dig')
 
-	if empty(get(t:, 'dig_params', {}))
+	if reload
 		s:setopts(TYPE_FILE, winid, rootdir, lines)
 	else
 		s:setopts(t:dig_params['type'], winid, t:dig_params['rootdir'], t:dig_params['lines'])
@@ -79,6 +72,7 @@ def s:setopts(type: string, winid: number, rootdir: string, lines: list<string>)
 		'rootdir': rootdir,
 		'lines': lines,
 		}
+	echo rootdir
 enddef
 
 
@@ -104,10 +98,14 @@ def s:file_filter(rootdir: string, winid: number, key: string): bool
 		endif
 		return v:true
 
-	elseif char2nr('~') == char2nr(key)
-		popup_close(winid)
-		t:dig_params = {}
-		OpenDigWindow(expand('~'))
+	elseif char2nr('r') == char2nr(key)
+		var toplevel: string = gitdiff.GetRootDir(rootdir)
+		if empty(toplevel)
+			utils.ErrorMsg('Not a git repository')
+		else
+			popup_close(winid)
+			OpenDigWindow(toplevel)
+		endif
 		return v:true
 
 	elseif char2nr('g') == char2nr(key)
@@ -142,7 +140,6 @@ def s:file_filter(rootdir: string, winid: number, key: string): bool
 	elseif char2nr('h') == char2nr(key)
 		if !has('win32') || !empty(rootdir)
 			popup_close(winid)
-			t:dig_params = {}
 			OpenDigWindow(rootdir .. '/..')
 		endif
 		return v:true
@@ -161,7 +158,6 @@ def s:file_callback(rootdir: string, winid: number, lnum: number)
 	if 0 < lnum
 		var path: string = (empty(rootdir) ? '' : rootdir .. '/') ..  lines[lnum - 1]
 		if isdirectory(path)
-			t:dig_params = {}
 			OpenDigWindow(path)
 		elseif filereadable(path)
 			if &modified
@@ -178,7 +174,6 @@ enddef
 def s:diff_filter(rootdir: string, winid: number, key: string): bool
 	if char2nr('h') == char2nr(key)
 		popup_close(winid)
-		t:dig_params = {}
 		OpenDigWindow(rootdir)
 		return v:true
 
