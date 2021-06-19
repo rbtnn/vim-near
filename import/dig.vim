@@ -77,79 +77,92 @@ enddef
 
 
 
-def s:file_filter(rootdir: string, winid: number, key: string): bool
-	if char2nr('d') == char2nr(key)
-		var toplevel: string = gitdiff.GetRootDir(rootdir)
-		if !executable('git')
-			utils.ErrorMsg('git is not executable')
-		elseif empty(toplevel)
-			utils.ErrorMsg('Not a git repository')
-		else
-			try
-				var lines: list<string> = gitdiff.Exec(fnamemodify(rootdir, ':p'))
-				if empty(lines)
-					utils.ErrorMsg('No modified files.')
-				else
-					s:setopts(TYPE_DIFF, winid, rootdir, lines)
-				endif
-			catch /^Vim:Interrupt$/
-				# nop
-			endtry
-		endif
-		return v:true
-
-	elseif char2nr('r') == char2nr(key)
-		var toplevel: string = gitdiff.GetRootDir(rootdir)
-		if empty(toplevel)
-			utils.ErrorMsg('Not a git repository')
-		else
-			popup_close(winid)
-			OpenDigWindow(toplevel)
-		endif
-		return v:true
-
-	elseif char2nr('g') == char2nr(key)
+def s:common_filter(rootdir: string, winid: number, key: string): list<bool>
+	if char2nr('g') == char2nr(key)
 		win_execute(winid, printf('call setpos(".", [0, %d, 1, 0])', 1))
 		win_execute(winid, 'redraw')
-		return v:true
+		return [(v:true)]
 
 	elseif char2nr('G') == char2nr(key)
 		win_execute(winid, printf('call setpos(".", [0, %d, 1, 0])', line('$', winid)))
 		win_execute(winid, 'redraw')
-		return v:true
+		return [(v:true)]
 
 	elseif char2nr('t') == char2nr(key)
 		popup_close(winid)
 		term_start(&shell, { 'cwd': rootdir, 'term_finish': 'close' })
-		return v:true
+		return [(v:true)]
 
-	elseif char2nr('c') == char2nr(key)
-		lcd `=rootdir`
-		utils.TitleMsg(printf('Change the current directory to "%s" in the current window.', getcwd()))
-		return v:true
-
-	elseif char2nr('e') == char2nr(key)
-		if has('win32')
-			popup_close(winid)
-			execute '!start ' .. fnamemodify(rootdir, ':p')
-		else
-			utils.ErrorMsg('error')
-		endif
-		return v:true
+	elseif char2nr('l') == char2nr(key)
+		return [popup_filter_menu(winid, "\<cr>")]
 
 	elseif char2nr('h') == char2nr(key)
 		if !has('win32') || !empty(rootdir)
 			popup_close(winid)
 			OpenDigWindow(rootdir .. '/..')
 		endif
-		return v:true
-
-	elseif char2nr('l') == char2nr(key)
-		return popup_filter_menu(winid, "\<cr>")
+		return [(v:true)]
 
 	else
-		return popup_filter_menu(winid, key)
+		return []
+	endif
+enddef
 
+
+
+def s:file_filter(rootdir: string, winid: number, key: string): bool
+	var m = s:common_filter(rootdir, winid, key)
+	if !empty(m)
+		return m[0]
+	else
+		if char2nr('d') == char2nr(key)
+			var toplevel: string = gitdiff.GetRootDir(rootdir)
+			if !executable('git')
+				utils.ErrorMsg('git is not executable')
+			elseif empty(toplevel)
+				utils.ErrorMsg('Not a git repository')
+			else
+				try
+					var lines: list<string> = gitdiff.Exec(fnamemodify(rootdir, ':p'))
+					if empty(lines)
+						utils.ErrorMsg('No modified files.')
+					else
+						s:setopts(TYPE_DIFF, winid, rootdir, lines)
+					endif
+				catch /^Vim:Interrupt$/
+					# nop
+				endtry
+			endif
+			return v:true
+
+		elseif char2nr('r') == char2nr(key)
+			var toplevel: string = gitdiff.GetRootDir(rootdir)
+			if empty(toplevel)
+				utils.ErrorMsg('Not a git repository')
+			else
+				popup_close(winid)
+				OpenDigWindow(toplevel)
+			endif
+			return v:true
+
+		elseif char2nr('c') == char2nr(key)
+			lcd `=rootdir`
+			utils.TitleMsg(printf('Change the current directory to "%s" in the current window.', getcwd()))
+			return v:true
+
+		elseif char2nr('e') == char2nr(key)
+			if has('win32')
+				popup_close(winid)
+				execute '!start ' .. fnamemodify(rootdir, ':p')
+			else
+				utils.ErrorMsg('error')
+			endif
+			return v:true
+
+		else
+			return popup_filter_menu(winid, key)
+
+		endif
 	endif
 enddef
 
@@ -172,14 +185,9 @@ enddef
 
 
 def s:diff_filter(rootdir: string, winid: number, key: string): bool
-	if char2nr('h') == char2nr(key)
-		popup_close(winid)
-		OpenDigWindow(rootdir)
-		return v:true
-
-	elseif char2nr('l') == char2nr(key)
-		return popup_filter_menu(winid, "\<cr>")
-
+	var m = s:common_filter(rootdir, winid, key)
+	if !empty(m)
+		return m[0]
 	else
 		return popup_filter_menu(winid, key)
 	endif
