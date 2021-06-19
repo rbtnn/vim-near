@@ -7,8 +7,10 @@ syntax match   digDirectory  '.*/$'
 syntax match   digAdded      '+\d\+\s'
 syntax match   digRemoved    '-\d\+\s'
 
-highlight digTitle         gui=NONE guibg=#88ee88 guifg=#000000
 highlight digDirectory     gui=NONE guibg=NONE    guifg=#77dd77
+highlight digTitle         gui=NONE guibg=#88ee88 guifg=#000000
+highlight digScrollbar     gui=NONE guibg=#202020 guifg=#000000
+highlight digThumb         gui=NONE guibg=#606060 guifg=#000000
 
 if hlexists('diffAdded')
 	highlight default link digAdded   diffAdded
