@@ -3,11 +3,12 @@ if exists("b:current_syntax")
   finish
 endif
 
-syntax match   digDir        '.*/$'
+syntax match   digDirectory  '.*/$'
 syntax match   digAdded      '+\d\+\s'
 syntax match   digRemoved    '-\d\+\s'
 
-highlight default link digDir   Directory
+highlight digTitle         gui=NONE guibg=#88ee88 guifg=#000000
+highlight digDirectory     gui=NONE guibg=NONE    guifg=#77dd77
 
 if hlexists('diffAdded')
 	highlight default link digAdded   diffAdded
