@@ -19,16 +19,16 @@ export def OpenDigWindow(q_args: string, cursor_text: string = '')
 	endif
 
 	var winid: number = popup_menu([], {
-		  'border': [1, 0, 0, 0],
-		  'borderchars': repeat([' '], 8),
-		  'padding': [0, 1, 0, 1],
-		  'borderhighlight': ['digTitle'],
-		  'scrollbarhighlight': 'digScrollbar',
-		  'thumbhighlight': 'digThumb',
-		  'minwidth': 40,
-		  'minheight': 20,
-		  'maxheight': 20,
-	  })
+			'border': [1, 0, 0, 0],
+			'borderchars': repeat([' '], 8),
+			'padding': [0, 1, 0, 1],
+			'borderhighlight': ['digTitle'],
+			'scrollbarhighlight': 'digScrollbar',
+			'thumbhighlight': 'digThumb',
+			'minwidth': 40,
+			'minheight': 20,
+			'maxheight': 20,
+		})
 	win_execute(winid, 'setfiletype dig')
 
 	if reload
@@ -56,25 +56,25 @@ enddef
 def s:setopts(type: string, winid: number, rootdir: string, lines: list<string>, lnum: number)
 	if type == TYPE_FILE
 		popup_setoptions(winid, {
-			  'title': type .. ' ' .. utils.FixPath(fnamemodify(rootdir, ':~')),
-			  'filter': function('s:file_filter', [rootdir]),
-			  'callback': function('s:file_callback', [rootdir]),
-		  })
+				'title': type .. ' ' .. utils.FixPath(fnamemodify(rootdir, ':~')),
+				'filter': function('s:file_filter', [rootdir]),
+				'callback': function('s:file_callback', [rootdir]),
+			})
 	else
 		popup_setoptions(winid, {
-			  'title': type .. ' ' .. utils.FixPath(fnamemodify(rootdir, ':~')),
-			  'filter': function('s:diff_filter', [rootdir]),
-			  'callback': function('s:diff_callback', [rootdir]),
-		  })
+				'title': type .. ' ' .. utils.FixPath(fnamemodify(rootdir, ':~')),
+				'filter': function('s:diff_filter', [rootdir]),
+				'callback': function('s:diff_callback', [rootdir]),
+			})
 	endif
 	popup_settext(winid, lines)
 	s:set_lnum(winid, lnum)
 	t:dig_params = {
-		  'type': type,
-		  'rootdir': rootdir,
-		  'lines': lines,
-		  'lnum': lnum,
-	  }
+			'type': type,
+			'rootdir': rootdir,
+			'lines': lines,
+			'lnum': lnum,
+		}
 enddef
 
 def s:set_lnum(winid: number, lnum: number)
@@ -94,6 +94,11 @@ def s:common_filter(rootdir: string, winid: number, key: string): list<bool>
 	elseif char2nr('.') == char2nr(key)
 		popup_close(winid)
 		OpenDigWindow('.')
+		return [(v:true)]
+
+	elseif char2nr('~') == char2nr(key)
+		popup_close(winid)
+		OpenDigWindow('~')
 		return [(v:true)]
 
 	elseif char2nr('t') == char2nr(key)

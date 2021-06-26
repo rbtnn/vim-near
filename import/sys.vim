@@ -29,9 +29,9 @@ def s:system(cmd: list<string>, cwd: string, for_git: bool, is_git_output: bool)
 		var path: string = tempname()
 		try
 			var job: job = job_start(cmd, {
-				'cwd': cwd,
-				'out_io': 'file',
-				'out_name': path,
+					'cwd': cwd,
+					'out_io': 'file',
+					'out_name': path,
 				})
 			while 'run' == job_status(job)
 			endwhile

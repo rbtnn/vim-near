@@ -31,10 +31,10 @@ export def Exec(path: string): list<string>
 				var key = m[3]
 				if !has_key(dict, key)
 					dict[key] = {
-						'additions': m[1],
-						'deletions': m[2],
-						'name': fnamemodify(key, ':t'),
-						'fullpath': s:expand2fullpath(toplevel .. '/' .. key),
+							'additions': m[1],
+							'deletions': m[2],
+							'name': fnamemodify(key, ':t'),
+							'fullpath': s:expand2fullpath(toplevel .. '/' .. key),
 						}
 				endif
 			endif

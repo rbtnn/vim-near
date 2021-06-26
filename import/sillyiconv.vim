@@ -71,7 +71,7 @@ enddef
 
 export def IsEUCJP(input: string): bool
 	# http://charset.7jp.net/euc.html
-	
+
 	var cs: string = input
 	var i: number = 0
 	while i < len(cs)
@@ -107,12 +107,12 @@ export def IsShiftJis(input: string): bool
 			i += 1
 		elseif 0xa1 <= char2nr(cs[i]) && char2nr(cs[i]) <= 0xdf
 			i += 1
-	
+
 		elseif (0x81 <= char2nr(cs[i]) && char2nr(cs[i]) <= 0x9f) ||
-		   	(0xe0 <= char2nr(cs[i]) && char2nr(cs[i]) <= 0xef)
+			(0xe0 <= char2nr(cs[i]) && char2nr(cs[i]) <= 0xef)
 			i += 1
 			if (0x40 <= char2nr(cs[i]) && char2nr(cs[i]) <= 0x7e) ||
-			   	(0x80 <= char2nr(cs[i]) && char2nr(cs[i]) <= 0xfc)
+				(0x80 <= char2nr(cs[i]) && char2nr(cs[i]) <= 0xfc)
 				i += 1
 			else
 				return v:false
@@ -151,7 +151,7 @@ export def IsISO2022JP(input: string): bool
 			i += 3
 			mode = MODE_C
 		elseif 0x1b == char2nr(cs[i]) && 0x26 == char2nr(cs[i + 1])  && 0x40 == char2nr(cs[i + 2]) &&
-		   	0x1b == char2nr(cs[i + 3]) && 0x24 == char2nr(cs[i + 4]) && 0x42 == char2nr(cs[i + 5])
+			0x1b == char2nr(cs[i + 3]) && 0x24 == char2nr(cs[i + 4]) && 0x42 == char2nr(cs[i + 5])
 			i += 6
 			mode = MODE_D
 		elseif 0x1b == char2nr(cs[i]) && 0x28 == char2nr(cs[i + 1])  && 0x42 == char2nr(cs[i + 2])

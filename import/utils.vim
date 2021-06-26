@@ -19,17 +19,17 @@ enddef
 
 export def ErrorMsg(text: string)
 	popup_notification(text, {
-		'pos': 'center',
-		'time': 1000,
-		'highlight': 'Error',
+			'pos': 'center',
+			'time': 1000,
+			'highlight': 'Error',
 		})
 enddef
 
 export def TitleMsg(text: string)
 	popup_notification(text, {
-		'pos': 'center',
-		'time': 1000,
-		'highlight': 'Title',
+			'pos': 'center',
+			'time': 1000,
+			'highlight': 'Title',
 		})
 enddef
 
