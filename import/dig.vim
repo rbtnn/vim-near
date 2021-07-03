@@ -2,12 +2,14 @@ if !exists(':vim9script')
 	finish
 endif
 vim9script
+scriptencoding utf-8
 
 import * as gitdiff from './gitdiff.vim'
 import * as utils from './utils.vim'
 
 const TYPE_FILE = '[file]'
 const TYPE_DIFF = '[diff]'
+const FOLDER_ICON = '📁'
 
 export def OpenDigWindow(q_args: string, cursor_text: string = '')
 	var rootdir: string = utils.FixPath(fnamemodify(expand(q_args), ':p'))
@@ -25,7 +27,7 @@ export def OpenDigWindow(q_args: string, cursor_text: string = '')
 			'borderhighlight': ['digTitle'],
 			'scrollbarhighlight': 'digScrollbar',
 			'thumbhighlight': 'digThumb',
-			'minwidth': 40,
+			'minwidth': &columns / 2,
 			'minheight': 20,
 			'maxheight': 20,
 		})
@@ -37,7 +39,7 @@ export def OpenDigWindow(q_args: string, cursor_text: string = '')
 			rootdir = ''
 			lines = utils.GetDriveLetters()
 		else
-			lines = utils.ReadDir(rootdir)
+			lines = utils.ReadDir(rootdir, FOLDER_ICON)
 		endif
 		s:setopts(TYPE_FILE, winid, rootdir, lines, 1)
 		if !empty(cursor_text)
@@ -197,7 +199,8 @@ enddef
 def s:file_callback(rootdir: string, winid: number, lnum: number)
 	var lines: list<string> = getbufline(winbufnr(winid), 1, '$')
 	if 0 < lnum
-		var path: string = (empty(rootdir) ? '' : rootdir .. '/') ..  lines[lnum - 1]
+		var line: string = substitute(lines[lnum - 1], '^' .. FOLDER_ICON, '', '')
+		var path: string = (empty(rootdir) ? '' : rootdir .. '/') .. line
 		if isdirectory(path)
 			OpenDigWindow(path)
 		elseif filereadable(path)

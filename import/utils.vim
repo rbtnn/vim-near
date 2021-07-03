@@ -37,10 +37,10 @@ export def FixPath(path: string): string
 	return substitute(path, '[\/]\+', '/', 'g')
 enddef
 
-export def ReadDir(path: string): list<string>
+export def ReadDir(path: string, folder_icon: string): list<string>
 	var xs: list<string> = s:readdir(path)
 	filter(xs, (_, x) => !empty(expand(path .. '/' .. x)))
-	map(xs, (_, x) => isdirectory(path .. '/' .. x) ? x .. '/' : x)
+	map(xs, (_, x) => isdirectory(path .. '/' .. x) ? folder_icon .. x .. '/' : x)
 	return xs
 enddef
 
