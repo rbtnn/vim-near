@@ -104,8 +104,10 @@ def s:common_filter(rootdir: string, winid: number, key: string): list<bool>
 		return [(v:true)]
 
 	elseif char2nr('t') == char2nr(key)
-		popup_close(winid)
-		term_start(&shell, { 'cwd': rootdir, 'term_finish': 'close' })
+		if !empty(rootdir)
+			popup_close(winid)
+			term_start(&shell, { 'cwd': rootdir, 'term_finish': 'close' })
+		endif
 		return [(v:true)]
 
 	elseif char2nr('l') == char2nr(key)
@@ -168,7 +170,7 @@ def s:file_filter(rootdir: string, winid: number, key: string): bool
 		elseif char2nr('h') == char2nr(key)
 			if !has('win32') || !empty(rootdir)
 				popup_close(winid)
-				OpenDigWindow(rootdir .. '/..', split(rootdir, '/')[-1] .. '/')
+				OpenDigWindow(rootdir .. '/..', FOLDER_ICON .. split(rootdir, '/')[-1] .. '/')
 			endif
 			return v:true
 
