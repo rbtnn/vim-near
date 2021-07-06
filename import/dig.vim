@@ -23,13 +23,13 @@ export def OpenDigWindow(q_args: string, cursor_text: string = '')
 	var winid: number = popup_menu([], {
 			'border': [1, 0, 0, 0],
 			'borderchars': repeat([' '], 8),
-			'padding': [0, 1, 0, 1],
+			'padding': [0, 0, 0, 1],
 			'borderhighlight': ['digTitle'],
 			'scrollbarhighlight': 'digScrollbar',
 			'thumbhighlight': 'digThumb',
 			'minwidth': &columns / 2,
-			'minheight': 20,
-			'maxheight': 20,
+			'minheight': 30,
+			'maxheight': 30,
 		})
 	win_execute(winid, 'setfiletype dig')
 
@@ -71,6 +71,7 @@ def s:setopts(type: string, winid: number, rootdir: string, lines: list<string>,
 	else
 		popup_settext(winid, lines)
 		s:set_lnum(winid, lnum)
+		win_execute(winid, 'redraw')
 	endif
 	t:dig_params = {
 			'type': type,
@@ -97,7 +98,6 @@ enddef
 
 def s:set_lnum(winid: number, lnum: number)
 	win_execute(winid, printf('call setpos(".", [0, %d, 1, 0])', lnum))
-	win_execute(winid, 'redraw')
 enddef
 
 def s:common_filter(rootdir: string, winid: number, key: string): list<bool>
@@ -116,16 +116,6 @@ def s:common_filter(rootdir: string, winid: number, key: string): list<bool>
 			t:dig_params['filter_text'] = input('filter>', get(t:dig_params, 'filter_text', ''))
 		endif
 		s:setopts(t:dig_params['type'], winid, t:dig_params['rootdir'], t:dig_params['lines'], t:dig_params['lnum'], t:dig_params['filter_text'])
-		return [(v:true)]
-
-	elseif char2nr('.') == char2nr(key)
-		popup_close(winid)
-		OpenDigWindow('.')
-		return [(v:true)]
-
-	elseif char2nr('~') == char2nr(key)
-		popup_close(winid)
-		OpenDigWindow('~')
 		return [(v:true)]
 
 	elseif char2nr('t') == char2nr(key)
@@ -167,6 +157,21 @@ def s:file_filter(rootdir: string, winid: number, key: string): bool
 					# nop
 				endtry
 			endif
+			return v:true
+
+		elseif char2nr('.') == char2nr(key)
+			popup_close(winid)
+			OpenDigWindow('.')
+			return v:true
+
+		elseif char2nr('!') == char2nr(key)
+			popup_close(winid)
+			OpenDigWindow(rootdir)
+			return v:true
+
+		elseif char2nr('~') == char2nr(key)
+			popup_close(winid)
+			OpenDigWindow('~')
 			return v:true
 
 		elseif char2nr('r') == char2nr(key)
@@ -232,11 +237,11 @@ def s:file_callback(rootdir: string, winid: number, lnum: number)
 			if isdirectory(path)
 				OpenDigWindow(path)
 			elseif filereadable(path)
-				if &modified
-					utils.ErrorMsg('The current buffer is modified.')
-				else
+				try
 					utils.OpenFile(path, -1)
-				endif
+				catch
+					utils.ErrorMsg(v:exception)
+				endtry
 			endif
 		endif
 	endif
