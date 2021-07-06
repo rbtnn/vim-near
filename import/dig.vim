@@ -11,27 +11,32 @@ const TYPE_FILE = 'file'
 const TYPE_DIFF = 'diff'
 const FOLDER_ICON = '📁'
 
-export def OpenDigWindow(q_args: string, cursor_text: string = '')
+export def OpenDigWindow(q_args: string, reuse_winid: number = -1, cursor_text: string = '')
 	var rootdir: string = utils.FixPath(fnamemodify(expand(q_args), ':p'))
 	var reload: bool = empty(get(t:, 'dig_params', {})) || !empty(q_args)
 	var lines: list<string>
+	var winid: number
 
 	if !isdirectory(rootdir)
 		return
 	endif
 
-	var winid: number = popup_menu([], {
-			'border': [1, 0, 0, 0],
-			'borderchars': repeat([' '], 8),
-			'padding': [0, 0, 0, 1],
-			'borderhighlight': ['digTitle'],
-			'scrollbarhighlight': 'digScrollbar',
-			'thumbhighlight': 'digThumb',
-			'minwidth': &columns / 2,
-			'minheight': 30,
-			'maxheight': 30,
-		})
-	win_execute(winid, 'setfiletype dig')
+	if -1 != reuse_winid
+		winid = reuse_winid
+	else
+		winid = popup_menu([], {
+				'border': [1, 0, 0, 0],
+				'borderchars': repeat([' '], 8),
+				'padding': [0, 0, 0, 1],
+				'borderhighlight': ['digTitle'],
+				'scrollbarhighlight': 'digScrollbar',
+				'thumbhighlight': 'digThumb',
+				'minwidth': &columns / 2,
+				'minheight': &lines / 2,
+				'maxheight': &lines / 2,
+			})
+		win_execute(winid, 'setfiletype dig')
+	endif
 
 	if reload
 		t:dig_params = {}
@@ -160,18 +165,15 @@ def s:file_filter(rootdir: string, winid: number, key: string): bool
 			return v:true
 
 		elseif char2nr('.') == char2nr(key)
-			popup_close(winid)
-			OpenDigWindow('.')
+			OpenDigWindow('.', winid)
 			return v:true
 
 		elseif char2nr('!') == char2nr(key)
-			popup_close(winid)
-			OpenDigWindow(rootdir)
+			OpenDigWindow(rootdir, winid)
 			return v:true
 
 		elseif char2nr('~') == char2nr(key)
-			popup_close(winid)
-			OpenDigWindow('~')
+			OpenDigWindow('~', winid)
 			return v:true
 
 		elseif char2nr('r') == char2nr(key)
@@ -179,8 +181,7 @@ def s:file_filter(rootdir: string, winid: number, key: string): bool
 			if empty(toplevel)
 				utils.ErrorMsg('Current directory is not a git repository.')
 			else
-				popup_close(winid)
-				OpenDigWindow(toplevel)
+				OpenDigWindow(toplevel, winid)
 			endif
 			return v:true
 
@@ -199,8 +200,7 @@ def s:file_filter(rootdir: string, winid: number, key: string): bool
 
 		elseif char2nr('h') == char2nr(key)
 			if !has('win32') || !empty(rootdir)
-				popup_close(winid)
-				OpenDigWindow(rootdir .. '/..', FOLDER_ICON .. split(rootdir, '/')[-1] .. '/')
+				OpenDigWindow(rootdir .. '/..', winid, FOLDER_ICON .. split(rootdir, '/')[-1] .. '/')
 			endif
 			return v:true
 
@@ -218,8 +218,7 @@ def s:diff_filter(rootdir: string, winid: number, key: string): bool
 		return m[0]
 	else
 		if char2nr('h') == char2nr(key)
-			popup_close(winid)
-			OpenDigWindow(rootdir)
+			OpenDigWindow(rootdir, winid)
 			return v:true
 
 		else
