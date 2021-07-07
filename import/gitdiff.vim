@@ -15,11 +15,7 @@ var s:git_diff_args_prev = get(s:, 'git_diff_args_prev', {})
 
 export def Exec(path: string): list<string>
 	var toplevel: string = GetRootDir(path)
-	if has('gui_running')
-		s:git_diff_args_prev[toplevel] = inputdialog('git-diff arguments', get(s:git_diff_args_prev, toplevel, ''))
-	else
-		s:git_diff_args_prev[toplevel] = input('git-diff arguments>', get(s:git_diff_args_prev, toplevel, ''))
-	endif
+	s:git_diff_args_prev[toplevel] = input('>', get(s:git_diff_args_prev, toplevel, ''))
 	var args: list<string> = split(s:git_diff_args_prev[toplevel], '\s\+')
 	redraw
 	var dict = {}

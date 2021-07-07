@@ -7,9 +7,7 @@ syntax match   digDirectory  '.*/$'
 syntax match   digAdded      '+\d\+\s'
 syntax match   digRemoved    '-\d\+\s'
 
-highlight digDirectory     gui=NONE guibg=NONE    guifg=#77dd77
-highlight digLabel         gui=BOLD guibg=#99ee99 guifg=#000000
-highlight digTitle         gui=BOLD guibg=#88ee88 guifg=#000000
+highlight digDirectory     gui=NONE guibg=NONE    guifg=#b5bd68
 highlight digScrollbar     gui=NONE guibg=#202020 guifg=#000000
 highlight digThumb         gui=NONE guibg=#606060 guifg=#000000
 

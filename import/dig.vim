@@ -25,17 +25,15 @@ export def OpenDigWindow(q_args: string, reuse_winid: number = -1, cursor_text: 
 		winid = reuse_winid
 	else
 		winid = popup_menu([], {
-				'border': [1, 0, 0, 0],
-				'borderchars': repeat([' '], 8),
-				'padding': [0, 0, 0, 1],
-				'borderhighlight': ['digTitle'],
+				'border': [1, 1, 1, 1],
 				'scrollbarhighlight': 'digScrollbar',
 				'thumbhighlight': 'digThumb',
-				'minwidth': &columns / 2,
-				'minheight': &lines / 2,
-				'maxheight': &lines / 2,
+				'minwidth': &columns / 3,
+				'minheight': &lines / 3,
+				'maxheight': &lines / 3,
 			})
 		win_execute(winid, 'setfiletype dig')
+		win_execute(winid, 'setlocal wincolor=Normal')
 	endif
 
 	if reload
@@ -115,11 +113,7 @@ def s:common_filter(rootdir: string, winid: number, key: string): list<bool>
 		return [(v:true)]
 
 	elseif char2nr('/') == char2nr(key)
-		if has('gui_running')
-			t:dig_params['filter_text'] = inputdialog('filter', get(t:dig_params, 'filter_text', ''))
-		else
-			t:dig_params['filter_text'] = input('filter>', get(t:dig_params, 'filter_text', ''))
-		endif
+		t:dig_params['filter_text'] = input('/', get(t:dig_params, 'filter_text', ''))
 		s:setopts(t:dig_params['type'], winid, t:dig_params['rootdir'], t:dig_params['lines'], t:dig_params['lnum'], t:dig_params['filter_text'])
 		return [(v:true)]
 
