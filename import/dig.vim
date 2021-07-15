@@ -52,6 +52,15 @@ export def OpenDigWindow(q_args: string, reuse_winid: number = -1, cursor_text: 
 			endif
 		endif
 	else
+		if 'file' == get(t:dig_params, 'type', '')
+			if has('win32') && (rootdir =~# '^[A-Z]:/\+\.\./\?$')
+				t:dig_params['rootdir'] = ''
+				t:dig_params['lines'] = utils.GetDriveLetters()
+			else
+				t:dig_params['rootdir'] = rootdir
+				t:dig_params['lines'] = utils.ReadDir(rootdir, FOLDER_ICON)
+			endif
+		endif
 		s:setopts(t:dig_params['type'], winid, t:dig_params['rootdir'], t:dig_params['lines'], t:dig_params['lnum'], t:dig_params['filter_text'])
 	endif
 enddef
