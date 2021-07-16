@@ -52,13 +52,12 @@ export def OpenDigWindow(q_args: string, reuse_winid: number = -1, cursor_text: 
 			endif
 		endif
 	else
-		if 'file' == get(t:dig_params, 'type', '')
-			if has('win32') && (rootdir =~# '^[A-Z]:/\+\.\./\?$')
+		if 'file' == t:dig_params['type']
+			if has('win32') && ((t:dig_params['rootdir'] =~# '^[A-Z]:/\+\.\./\?$') || empty(t:dig_params['rootdir']))
 				t:dig_params['rootdir'] = ''
 				t:dig_params['lines'] = utils.GetDriveLetters()
 			else
-				t:dig_params['rootdir'] = rootdir
-				t:dig_params['lines'] = utils.ReadDir(rootdir, FOLDER_ICON)
+				t:dig_params['lines'] = utils.ReadDir(t:dig_params['rootdir'], FOLDER_ICON)
 			endif
 		endif
 		s:setopts(t:dig_params['type'], winid, t:dig_params['rootdir'], t:dig_params['lines'], t:dig_params['lnum'], t:dig_params['filter_text'])
@@ -93,15 +92,16 @@ def s:setopts(type: string, winid: number, rootdir: string, lines: list<string>,
 			'filter_text': filter_text,
 		}
 	var filtered_count = !empty(filter_text) ? printf('(%d/%d)', len(filtered_lines), len(lines)) : ''
+	var title = printf('[%s%s] %s ', type, filtered_count, empty(rootdir) ? '' : utils.FixPath(fnamemodify(rootdir, ':~')))
 	if type == TYPE_FILE
 		popup_setoptions(winid, {
-				'title': printf('[%s%s] %s', type, filtered_count, utils.FixPath(fnamemodify(rootdir, ':~'))),
+				'title': title,
 				'filter': function('s:file_filter', [rootdir]),
 				'callback': function('s:file_callback', [rootdir]),
 			})
 	else
 		popup_setoptions(winid, {
-				'title': printf('[%s%s] %s', type, filtered_count, utils.FixPath(fnamemodify(rootdir, ':~'))),
+				'title': title,
 				'filter': function('s:diff_filter', [rootdir]),
 				'callback': function('s:diff_callback', [rootdir]),
 			})
