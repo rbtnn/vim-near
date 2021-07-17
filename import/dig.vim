@@ -13,8 +13,6 @@ const FOLDER_ICON = '📁'
 
 export def OpenDigWindow(q_args: string, reuse_winid: number = -1, cursor_text: string = '')
 	var rootdir: string = utils.FixPath(fnamemodify(expand(q_args), ':p'))
-	var reload: bool = empty(get(t:, 'dig_params', {})) || !empty(q_args)
-	var lines: list<string>
 	var winid: number
 
 	if !isdirectory(rootdir)
@@ -26,6 +24,7 @@ export def OpenDigWindow(q_args: string, reuse_winid: number = -1, cursor_text: 
 	else
 		winid = popup_menu([], {
 				'border': [1, 1, 1, 1],
+				'padding': [1, 1, 1, 1],
 				'scrollbarhighlight': 'digScrollbar',
 				'thumbhighlight': 'digThumb',
 				'minwidth': &columns / 2,
@@ -37,76 +36,104 @@ export def OpenDigWindow(q_args: string, reuse_winid: number = -1, cursor_text: 
 		win_execute(winid, 'setlocal wincolor=Normal')
 	endif
 
-	if reload
-		t:dig_params = {}
-		if has('win32') && (rootdir =~# '^[A-Z]:/\+\.\./\?$')
-			rootdir = ''
-			lines = utils.GetDriveLetters()
+	if !empty(q_args) || empty(get(t:, 'dig_params', {}))
+		t:dig_params = {
+			'rootdir': rootdir,
+			'type': TYPE_FILE,
+			'lnum': 1,
+			'lines': [],
+			'search_mode': v:false,
+			'search_text': '',
+			'search_winid': -1,
+		}
+	endif
+
+	if TYPE_FILE == t:dig_params['type']
+		if has('win32') && ((t:dig_params['rootdir'] =~# '^[A-Z]:/\+\.\./\?$') || empty(t:dig_params['rootdir']))
+			t:dig_params['rootdir'] = ''
+			t:dig_params['lines'] = utils.GetDriveLetters()
 		else
-			lines = utils.ReadDir(rootdir, FOLDER_ICON)
+			t:dig_params['lines'] = utils.ReadDir(t:dig_params['rootdir'], FOLDER_ICON)
 		endif
-		s:setopts(TYPE_FILE, winid, rootdir, lines, 1, '')
-		if !empty(cursor_text)
-			var i = index(t:dig_params['lines'], cursor_text)
-			if -1 != i
-				s:set_lnum(winid, i + 1)
-			endif
+	endif
+
+	s:redraw(winid)
+
+	if !empty(cursor_text)
+		var i = index(t:dig_params['lines'], cursor_text)
+		if -1 != i
+			s:set_lnum(winid, i + 1)
 		endif
-	else
-		if 'file' == t:dig_params['type']
-			if has('win32') && ((t:dig_params['rootdir'] =~# '^[A-Z]:/\+\.\./\?$') || empty(t:dig_params['rootdir']))
-				t:dig_params['rootdir'] = ''
-				t:dig_params['lines'] = utils.GetDriveLetters()
-			else
-				t:dig_params['lines'] = utils.ReadDir(t:dig_params['rootdir'], FOLDER_ICON)
-			endif
-		endif
-		s:setopts(t:dig_params['type'], winid, t:dig_params['rootdir'], t:dig_params['lines'], t:dig_params['lnum'], t:dig_params['filter_text'])
 	endif
 enddef
 
 
 
-def s:setopts(type: string, winid: number, rootdir: string, lines: list<string>, lnum: number, filter_text: string)
-	clearmatches(winid)
+def s:make_title(filtered_lines: list<string>): string
+	var t = t:dig_params['type']
+	var lines = t:dig_params['lines']
+	var rootdir = t:dig_params['rootdir']
+	var search_text = t:dig_params['search_text']
+	var c = empty(search_text) ? len(lines) : printf('%d/%d', len(filtered_lines), len(lines))
+	var s = empty(rootdir) ? '' : utils.FixPath(fnamemodify(rootdir, ':~'))
+	return printf('%s(%s): %s ', t, c, s)
+enddef
+
+def s:set_filtered_lines(winid: number)
 	var filtered_lines: list<string>
-	if !empty(filter_text)
-		for line in lines
-			# use ignorecase
-			if line =~? filter_text
+	clearmatches(winid)
+	if !empty(t:dig_params['search_text'])
+		var pattern = ''
+		for c in split(t:dig_params['search_text'], '\zs')
+			pattern = pattern .. printf('\%%x%02x', char2nr(c))
+		endfor
+		for line in t:dig_params['lines']
+			if line =~# pattern
 				filtered_lines += [line]
 			endif
 		endfor
-		win_execute(winid, printf("matchadd('Search', %s)", string(filter_text)))
 		popup_settext(winid, filtered_lines)
 		s:set_lnum(winid, 1)
+		win_execute(winid, printf("matchadd('Search', %s)", string(pattern)))
 	else
-		popup_settext(winid, lines)
-		s:set_lnum(winid, lnum)
+		popup_settext(winid, t:dig_params['lines'])
+		s:set_lnum(winid, t:dig_params['lnum'])
 		win_execute(winid, 'redraw')
 	endif
-	t:dig_params = {
-			'type': type,
-			'rootdir': rootdir,
-			'lines': lines,
-			'lnum': lnum,
-			'filter_text': filter_text,
-		}
-	var filtered_count = !empty(filter_text) ? printf('%d/%d', len(filtered_lines), len(lines)) : len(lines)
-	var title = printf('%s(%s): %s ', type, filtered_count, empty(rootdir) ? '' : utils.FixPath(fnamemodify(rootdir, ':~')))
-	if type == TYPE_FILE
+	popup_setoptions(winid, { 'title': s:make_title(filtered_lines), })
+enddef
+
+def s:set_searchwin(winid: number)
+	popup_close(t:dig_params['search_winid'])
+	if t:dig_params['search_mode']
+		t:dig_params['search_winid'] = popup_create('/' .. t:dig_params['search_text'], {})
+		var info = popup_getpos(winid)
+		popup_setoptions(t:dig_params['search_winid'], {
+			'pos': 'topleft',
+			'line': info['line'] + 1,
+			'col': info['col'] + 2,
+			'zindex': 9999,
+			'highlight': 'Directory',
+			})
+	else
+		t:dig_params['search_winid'] = -1
+	endif
+enddef
+
+def s:redraw(winid: number)
+	s:set_filtered_lines(winid)
+	if t:dig_params['type'] == TYPE_FILE
 		popup_setoptions(winid, {
-				'title': title,
-				'filter': function('s:file_filter', [rootdir]),
-				'callback': function('s:file_callback', [rootdir]),
+				'filter': function('s:file_filter', [(t:dig_params['rootdir'])]),
+				'callback': function('s:file_callback', [(t:dig_params['rootdir'])]),
 			})
 	else
 		popup_setoptions(winid, {
-				'title': title,
-				'filter': function('s:diff_filter', [rootdir]),
-				'callback': function('s:diff_callback', [rootdir]),
+				'filter': function('s:diff_filter', [(t:dig_params['rootdir'])]),
+				'callback': function('s:diff_callback', [(t:dig_params['rootdir'])]),
 			})
 	endif
+	s:set_searchwin(winid)
 enddef
 
 def s:set_lnum(winid: number, lnum: number)
@@ -114,24 +141,51 @@ def s:set_lnum(winid: number, lnum: number)
 enddef
 
 def s:common_filter(rootdir: string, winid: number, key: string): list<bool>
-	if char2nr('/') == char2nr(key)
-		t:dig_params['filter_text'] = input('/', get(t:dig_params, 'filter_text', ''))
-		s:setopts(t:dig_params['type'], winid, t:dig_params['rootdir'], t:dig_params['lines'], t:dig_params['lnum'], t:dig_params['filter_text'])
-		return [(v:true)]
+	if get(t:dig_params, 'search_mode', v:false)
+		if char2nr("\r") == char2nr(key)
+			t:dig_params['search_mode'] = v:false
 
-	elseif char2nr('g') == char2nr(key)
-		s:set_lnum(winid, 1)
-		return [(v:true)]
+		elseif 0x1b == char2nr(key) # Esc
+			return [popup_filter_menu(winid, "\<Esc>")]
 
-	elseif char2nr('G') == char2nr(key)
-		s:set_lnum(winid, line('$', winid))
-		return [(v:true)]
+		elseif 0x08 == char2nr(key) # Ctrl-h
+			if empty(t:dig_params['search_text'])
+				t:dig_params['search_mode'] = v:false
+				t:dig_params['search_text'] = ''
+			else
+				t:dig_params['search_text'] = join(split(t:dig_params['search_text'], '\zs')[: -2], '')
+			endif
 
-	elseif char2nr('l') == char2nr(key)
-		return [popup_filter_menu(winid, "\<cr>")]
+		elseif 0x15 == char2nr(key) # Ctrl-u
+			t:dig_params['search_text'] = ''
+
+		elseif (strtrans(key) != '^@') && (1 == len(strtrans(key)))
+			t:dig_params['search_text'] = t:dig_params['search_text'] .. key
+
+		endif
+		s:redraw(winid)
+		return [(v:true)]
 
 	else
-		return []
+		if char2nr('/') == char2nr(key)
+			t:dig_params['search_mode'] = v:true
+			s:redraw(winid)
+			return [(v:true)]
+
+		elseif char2nr('g') == char2nr(key)
+			s:set_lnum(winid, 1)
+			return [(v:true)]
+
+		elseif char2nr('G') == char2nr(key)
+			s:set_lnum(winid, line('$', winid))
+			return [(v:true)]
+
+		elseif char2nr('l') == char2nr(key)
+			return [popup_filter_menu(winid, "\<cr>")]
+
+		else
+			return []
+		endif
 	endif
 enddef
 
@@ -153,7 +207,12 @@ def s:file_filter(rootdir: string, winid: number, key: string): bool
 					if empty(lines)
 						utils.ErrorMsg('There are no modified files.')
 					else
-						s:setopts(TYPE_DIFF, winid, rootdir, lines, 1, '')
+						t:dig_params['type'] = TYPE_DIFF
+						t:dig_params['rootdir'] = rootdir
+						t:dig_params['lines'] = lines
+						t:dig_params['lnum'] = 1
+						t:dig_params['search_text'] = ''
+						s:redraw(winid)
 					endif
 				catch /^Vim:Interrupt$/
 					# nop
@@ -248,6 +307,7 @@ def s:file_callback(rootdir: string, winid: number, lnum: number)
 			endif
 		endif
 	endif
+	popup_close(get(t:dig_params, 'search_winid', -1))
 enddef
 
 def s:diff_callback(rootdir: string, winid: number, lnum: number)
