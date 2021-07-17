@@ -12,15 +12,29 @@ var s:info_caches = get(s:, 'info_caches', {})
 var s:keys_caches = get(s:, 'keys_caches', {})
 var s:args_caches = get(s:, 'args_caches', {})
 var s:git_diff_args_prev = get(s:, 'git_diff_args_prev', {})
+var s:git_grep_args_prev = get(s:, 'git_grep_args_prev', {})
+
+export def ExecGrep(path: string): list<string>
+	var toplevel: string = GetRootDir(path)
+	if isdirectory(toplevel)
+		s:git_grep_args_prev[toplevel] = input('>', get(s:git_grep_args_prev, toplevel, ''))
+		var args: list<string> = split(s:git_grep_args_prev[toplevel], '\s\+')
+		redraw
+		var cmd: list<string> = ['git', '--no-pager', 'grep', '-n'] + args
+		return sys.SystemForGit(cmd, toplevel, v:true)
+	else
+		return []
+	endif
+enddef
 
 export def Exec(path: string): list<string>
 	var toplevel: string = GetRootDir(path)
-	s:git_diff_args_prev[toplevel] = input('>', get(s:git_diff_args_prev, toplevel, ''))
-	var args: list<string> = split(s:git_diff_args_prev[toplevel], '\s\+')
-	redraw
-	var dict = {}
-	var cmd: list<string> = ['git', '--no-pager', 'diff', '--numstat'] + args
 	if isdirectory(toplevel)
+		s:git_diff_args_prev[toplevel] = input('>', get(s:git_diff_args_prev, toplevel, ''))
+		var args: list<string> = split(s:git_diff_args_prev[toplevel], '\s\+')
+		redraw
+		var dict = {}
+		var cmd: list<string> = ['git', '--no-pager', 'diff', '--numstat'] + args
 		for line in sys.SystemForGit(cmd, toplevel, v:true)
 			var m = matchlist(line, '^\s*\(\d\+\)\s\+\(\d\+\)\s\+\(.*\)$')
 			if !empty(m)

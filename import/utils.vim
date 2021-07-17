@@ -18,19 +18,15 @@ export def GetDriveLetters(): list<string>
 enddef
 
 export def ErrorMsg(text: string)
-	popup_notification(text, {
-			'pos': 'center',
-			'time': 1000,
-			'highlight': 'Error',
-		})
+	echohl Error
+	echo text
+	echohl None
 enddef
 
 export def TitleMsg(text: string)
-	popup_notification(text, {
-			'pos': 'center',
-			'time': 1000,
-			'highlight': 'Title',
-		})
+	echohl Title
+	echo text
+	echohl None
 enddef
 
 export def FixPath(path: string): string

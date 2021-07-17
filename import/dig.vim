@@ -4,11 +4,12 @@ endif
 vim9script
 scriptencoding utf-8
 
-import * as gitdiff from './gitdiff.vim'
+import * as git from './git.vim'
 import * as utils from './utils.vim'
 
 const TYPE_FILE = 'file'
 const TYPE_DIFF = 'diff'
+const TYPE_GREP = 'grep'
 const FOLDER_ICON = '📁'
 
 export def OpenDigWindow(q_args: string, reuse_winid: number = -1, cursor_text: string = '')
@@ -91,13 +92,19 @@ def s:setopts(type: string, winid: number, rootdir: string, lines: list<string>,
 			'lnum': lnum,
 			'filter_text': filter_text,
 		}
-	var filtered_count = !empty(filter_text) ? printf('(%d/%d)', len(filtered_lines), len(lines)) : ''
-	var title = printf('[%s%s] %s ', type, filtered_count, empty(rootdir) ? '' : utils.FixPath(fnamemodify(rootdir, ':~')))
+	var filtered_count = !empty(filter_text) ? printf('%d/%d', len(filtered_lines), len(lines)) : len(lines)
+	var title = printf('%s(%s): %s ', type, filtered_count, empty(rootdir) ? '' : utils.FixPath(fnamemodify(rootdir, ':~')))
 	if type == TYPE_FILE
 		popup_setoptions(winid, {
 				'title': title,
 				'filter': function('s:file_filter', [rootdir]),
 				'callback': function('s:file_callback', [rootdir]),
+			})
+	elseif type == TYPE_GREP
+		popup_setoptions(winid, {
+				'title': title,
+				'filter': function('s:grep_filter', [rootdir]),
+				'callback': function('s:grep_callback', [rootdir]),
 			})
 	else
 		popup_setoptions(winid, {
@@ -113,24 +120,9 @@ def s:set_lnum(winid: number, lnum: number)
 enddef
 
 def s:common_filter(rootdir: string, winid: number, key: string): list<bool>
-	if char2nr('g') == char2nr(key)
-		s:set_lnum(winid, 1)
-		return [(v:true)]
-
-	elseif char2nr('G') == char2nr(key)
-		s:set_lnum(winid, line('$', winid))
-		return [(v:true)]
-
-	elseif char2nr('/') == char2nr(key)
+	if char2nr('/') == char2nr(key)
 		t:dig_params['filter_text'] = input('/', get(t:dig_params, 'filter_text', ''))
 		s:setopts(t:dig_params['type'], winid, t:dig_params['rootdir'], t:dig_params['lines'], t:dig_params['lnum'], t:dig_params['filter_text'])
-		return [(v:true)]
-
-	elseif char2nr('t') == char2nr(key)
-		if !empty(rootdir)
-			popup_close(winid)
-			term_start(&shell, { 'cwd': rootdir, 'term_finish': 'close' })
-		endif
 		return [(v:true)]
 
 	elseif char2nr('l') == char2nr(key)
@@ -148,14 +140,14 @@ def s:file_filter(rootdir: string, winid: number, key: string): bool
 		return m[0]
 	else
 		if char2nr('d') == char2nr(key)
-			var toplevel: string = gitdiff.GetRootDir(rootdir)
+			var toplevel: string = git.GetRootDir(rootdir)
 			if !executable('git')
 				utils.ErrorMsg('git is not executable.')
 			elseif empty(toplevel)
 				utils.ErrorMsg('Current directory is not a git repository.')
 			else
 				try
-					var lines: list<string> = gitdiff.Exec(fnamemodify(rootdir, ':p'))
+					var lines: list<string> = git.Exec(fnamemodify(rootdir, ':p'))
 					if empty(lines)
 						utils.ErrorMsg('There are no modified files.')
 					else
@@ -164,6 +156,33 @@ def s:file_filter(rootdir: string, winid: number, key: string): bool
 				catch /^Vim:Interrupt$/
 					# nop
 				endtry
+			endif
+			return v:true
+
+		elseif char2nr('g') == char2nr(key)
+			var toplevel: string = git.GetRootDir(rootdir)
+			if !executable('git')
+				utils.ErrorMsg('git is not executable.')
+			elseif empty(toplevel)
+				utils.ErrorMsg('Current directory is not a git repository.')
+			else
+				try
+					var lines: list<string> = git.ExecGrep(fnamemodify(rootdir, ':p'))
+					if empty(lines)
+						utils.ErrorMsg('There are no matched lines.')
+					else
+						s:setopts(TYPE_GREP, winid, rootdir, lines, 1, '')
+					endif
+				catch /^Vim:Interrupt$/
+					# nop
+				endtry
+			endif
+			return v:true
+
+		elseif char2nr('t') == char2nr(key)
+			if !empty(rootdir)
+				popup_close(winid)
+				term_start(&shell, { 'cwd': rootdir, 'term_finish': 'close' })
 			endif
 			return v:true
 
@@ -180,7 +199,7 @@ def s:file_filter(rootdir: string, winid: number, key: string): bool
 			return v:true
 
 		elseif char2nr('r') == char2nr(key)
-			var toplevel: string = gitdiff.GetRootDir(rootdir)
+			var toplevel: string = git.GetRootDir(rootdir)
 			if empty(toplevel)
 				utils.ErrorMsg('Current directory is not a git repository.')
 			else
@@ -210,6 +229,45 @@ def s:file_filter(rootdir: string, winid: number, key: string): bool
 		else
 			return popup_filter_menu(winid, key)
 
+		endif
+	endif
+enddef
+
+def s:grep_filter(rootdir: string, winid: number, key: string): bool
+	t:dig_params['lnum'] = line('.', winid)
+	var m = s:common_filter(rootdir, winid, key)
+	if !empty(m)
+		return m[0]
+	else
+		if char2nr('h') == char2nr(key)
+			OpenDigWindow(rootdir, winid)
+			return v:true
+
+		else
+			return popup_filter_menu(winid, key)
+		endif
+	endif
+enddef
+
+def s:grep_callback(rootdir: string, winid: number, lnum: number)
+	var lines: list<string> = getbufline(winbufnr(winid), 1, '$')
+	if 0 < lnum
+		if !empty(lines[lnum - 1])
+			var m = matchlist(lines[lnum - 1], '^\(.\{-}\):\(\d\+\):\(.*\)$')
+			if !empty(m)
+				var toplevel: string = git.GetRootDir(rootdir)
+				var path: string = toplevel .. '/' .. m[1]
+				var n: number = str2nr(m[2])
+				if isdirectory(path)
+					OpenDigWindow(path)
+				elseif filereadable(path)
+					try
+						utils.OpenFile(path, n)
+					catch
+						utils.ErrorMsg(v:exception)
+					endtry
+				endif
+			endif
 		endif
 	endif
 enddef
@@ -251,7 +309,7 @@ enddef
 
 def s:diff_callback(rootdir: string, winid: number, lnum: number)
 	if 0 < lnum
-		gitdiff.ShowDiff(rootdir, lnum)
+		git.ShowDiff(rootdir, lnum)
 	endif
 enddef
 
