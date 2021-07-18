@@ -11,13 +11,11 @@ const NUMSTAT_HEAD = 12
 var s:info_caches = get(s:, 'info_caches', {})
 var s:keys_caches = get(s:, 'keys_caches', {})
 var s:args_caches = get(s:, 'args_caches', {})
-var s:git_diff_args_prev = get(s:, 'git_diff_args_prev', {})
 
-export def Exec(path: string): list<string>
+export def Exec(path: string, input: string): list<string>
 	var toplevel: string = GetRootDir(path)
 	if isdirectory(toplevel)
-		s:git_diff_args_prev[toplevel] = input('>', get(s:git_diff_args_prev, toplevel, ''))
-		var args: list<string> = split(s:git_diff_args_prev[toplevel], '\s\+')
+		var args: list<string> = split(input, '\s\+')
 		redraw
 		var dict = {}
 		var cmd: list<string> = ['git', '--no-pager', 'diff', '--numstat'] + args

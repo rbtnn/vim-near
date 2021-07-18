@@ -7,9 +7,12 @@ scriptencoding utf-8
 import * as git from './git.vim'
 import * as utils from './utils.vim'
 
+const FOLDER_ICON = '📁'
 const TYPE_FILE = 'file'
 const TYPE_DIFF = 'diff'
-const FOLDER_ICON = '📁'
+const INPUT_MODE_MENU = 'MENU'
+const INPUT_MODE_SEARCH = 'SEARCH'
+const INPUT_MODE_GITDIFF = 'GITDIFF'
 
 export def OpenDigWindow(q_args: string, reuse_winid: number = -1, cursor_text: string = '')
 	var rootdir: string = utils.FixPath(fnamemodify(expand(q_args), ':p'))
@@ -42,9 +45,10 @@ export def OpenDigWindow(q_args: string, reuse_winid: number = -1, cursor_text: 
 			'type': TYPE_FILE,
 			'lnum': 1,
 			'lines': [],
-			'search_mode': v:false,
+			'input_mode': INPUT_MODE_MENU,
+			'input_winid': -1,
 			'search_text': '',
-			'search_winid': -1,
+			'gitdiff_text': '',
 		}
 	endif
 
@@ -104,11 +108,21 @@ def s:set_filtered_lines(winid: number)
 enddef
 
 def s:set_searchwin(winid: number)
-	popup_close(t:dig_params['search_winid'])
-	if t:dig_params['search_mode']
-		t:dig_params['search_winid'] = popup_create('/' .. t:dig_params['search_text'], {})
+	popup_close(t:dig_params['input_winid'])
+	if INPUT_MODE_SEARCH == t:dig_params['input_mode']
+		t:dig_params['input_winid'] = popup_create('/' .. t:dig_params['search_text'], {})
 		var info = popup_getpos(winid)
-		popup_setoptions(t:dig_params['search_winid'], {
+		popup_setoptions(t:dig_params['input_winid'], {
+			'pos': 'topleft',
+			'line': info['line'] + 1,
+			'col': info['col'] + 2,
+			'zindex': 9999,
+			'highlight': 'Directory',
+			})
+	elseif INPUT_MODE_GITDIFF == t:dig_params['input_mode']
+		t:dig_params['input_winid'] = popup_create('>' .. t:dig_params['gitdiff_text'], {})
+		var info = popup_getpos(winid)
+		popup_setoptions(t:dig_params['input_winid'], {
 			'pos': 'topleft',
 			'line': info['line'] + 1,
 			'col': info['col'] + 2,
@@ -116,7 +130,7 @@ def s:set_searchwin(winid: number)
 			'highlight': 'Directory',
 			})
 	else
-		t:dig_params['search_winid'] = -1
+		t:dig_params['input_winid'] = -1
 	endif
 enddef
 
@@ -140,35 +154,68 @@ def s:set_lnum(winid: number, lnum: number)
 	win_execute(winid, printf('call setpos(".", [0, %d, 1, 0])', lnum))
 enddef
 
-def s:common_filter(rootdir: string, winid: number, key: string): list<bool>
-	if get(t:dig_params, 'search_mode', v:false)
-		if char2nr("\r") == char2nr(key)
-			t:dig_params['search_mode'] = v:false
-
-		elseif 0x1b == char2nr(key) # Esc
-			return [popup_filter_menu(winid, "\<Esc>")]
-
-		elseif 0x08 == char2nr(key) # Ctrl-h
-			if empty(t:dig_params['search_text'])
-				t:dig_params['search_mode'] = v:false
-				t:dig_params['search_text'] = ''
-			else
-				t:dig_params['search_text'] = join(split(t:dig_params['search_text'], '\zs')[: -2], '')
-			endif
-
-		elseif 0x15 == char2nr(key) # Ctrl-u
-			t:dig_params['search_text'] = ''
-
-		elseif (strtrans(key) != '^@') && (1 == len(strtrans(key)))
-			t:dig_params['search_text'] = t:dig_params['search_text'] .. key
-
+def s:input_common_filter(winid: number, key: string, key_mode: string, key_text: string): list<bool>
+	if 0x1b == char2nr(key) # Esc
+		return [popup_filter_menu(winid, "\<Esc>")]
+	elseif 0x08 == char2nr(key) # Ctrl-h
+		if empty(t:dig_params[key_text])
+			t:dig_params[key_mode] = INPUT_MODE_MENU
+			t:dig_params[key_text] = ''
+		else
+			t:dig_params[key_text] = join(split(t:dig_params[key_text], '\zs')[: -2], '')
 		endif
-		s:redraw(winid)
-		return [(v:true)]
+	elseif 0x15 == char2nr(key) # Ctrl-u
+		t:dig_params[key_text] = ''
+	elseif (strtrans(key) != '^@') && (1 == len(strtrans(key)))
+		t:dig_params[key_text] = t:dig_params[key_text] .. key
+	endif
+	s:redraw(winid)
+	return [(v:true)]
+enddef
+
+def s:common_filter(rootdir: string, winid: number, key: string): list<bool>
+	if INPUT_MODE_SEARCH == t:dig_params['input_mode']
+		if char2nr("\r") == char2nr(key)
+			t:dig_params['input_mode'] = INPUT_MODE_MENU
+			s:redraw(winid)
+			return [(v:true)]
+		else
+			return s:input_common_filter(winid, key, 'input_mode', 'search_text')
+		endif
+
+	elseif INPUT_MODE_GITDIFF == t:dig_params['input_mode']
+		if char2nr("\r") == char2nr(key)
+			t:dig_params['input_mode'] = INPUT_MODE_MENU
+			var toplevel: string = git.GetRootDir(rootdir)
+			if !executable('git')
+				utils.ErrorMsg('git is not executable.')
+			elseif empty(toplevel)
+				utils.ErrorMsg('Current directory is not a git repository.')
+			else
+				try
+					var lines: list<string> = git.Exec(fnamemodify(rootdir, ':p'), t:dig_params['gitdiff_text'])
+					if empty(lines)
+						utils.ErrorMsg('There are no modified files.')
+					else
+						t:dig_params['type'] = TYPE_DIFF
+						t:dig_params['rootdir'] = rootdir
+						t:dig_params['lines'] = lines
+						t:dig_params['lnum'] = 1
+						t:dig_params['search_text'] = ''
+					endif
+				catch /^Vim:Interrupt$/
+					# nop
+				endtry
+			endif
+			s:redraw(winid)
+			return [(v:true)]
+		else
+			return s:input_common_filter(winid, key, 'input_mode', 'gitdiff_text')
+		endif
 
 	else
 		if char2nr('/') == char2nr(key)
-			t:dig_params['search_mode'] = v:true
+			t:dig_params['input_mode'] = INPUT_MODE_SEARCH
 			s:redraw(winid)
 			return [(v:true)]
 
@@ -196,28 +243,8 @@ def s:file_filter(rootdir: string, winid: number, key: string): bool
 		return m[0]
 	else
 		if char2nr('d') == char2nr(key)
-			var toplevel: string = git.GetRootDir(rootdir)
-			if !executable('git')
-				utils.ErrorMsg('git is not executable.')
-			elseif empty(toplevel)
-				utils.ErrorMsg('Current directory is not a git repository.')
-			else
-				try
-					var lines: list<string> = git.Exec(fnamemodify(rootdir, ':p'))
-					if empty(lines)
-						utils.ErrorMsg('There are no modified files.')
-					else
-						t:dig_params['type'] = TYPE_DIFF
-						t:dig_params['rootdir'] = rootdir
-						t:dig_params['lines'] = lines
-						t:dig_params['lnum'] = 1
-						t:dig_params['search_text'] = ''
-						s:redraw(winid)
-					endif
-				catch /^Vim:Interrupt$/
-					# nop
-				endtry
-			endif
+			t:dig_params['input_mode'] = INPUT_MODE_GITDIFF
+			s:redraw(winid)
 			return v:true
 
 		elseif char2nr('t') == char2nr(key)
@@ -307,12 +334,15 @@ def s:file_callback(rootdir: string, winid: number, lnum: number)
 			endif
 		endif
 	endif
-	popup_close(get(t:dig_params, 'search_winid', -1))
+	popup_close(get(t:dig_params, 'input_winid', -1))
 enddef
 
 def s:diff_callback(rootdir: string, winid: number, lnum: number)
+	var lines: list<string> = getbufline(winbufnr(winid), 1, '$')
 	if 0 < lnum
-		git.ShowDiff(rootdir, lnum)
+		if !empty(lines[lnum - 1])
+			git.ShowDiff(rootdir, lnum)
+		endif
 	endif
 enddef
 
