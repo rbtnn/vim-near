@@ -10,9 +10,9 @@ import * as utils from './utils.vim'
 const FOLDER_ICON = '📁'
 const TYPE_FILE = 'file'
 const TYPE_DIFF = 'diff'
-const INPUT_MODE_MENU = 'MENU'
-const INPUT_MODE_SEARCH = 'SEARCH'
-const INPUT_MODE_GITDIFF = 'GITDIFF'
+const INPUT_MODE_MENU = 'menu'
+const INPUT_MODE_SEARCH = 'search'
+const INPUT_MODE_GITDIFF = 'gitdiff'
 
 export def OpenDigWindow(q_args: string, reuse_winid: number = -1, cursor_text: string = '')
 	var rootdir: string = utils.FixPath(fnamemodify(expand(q_args), ':p'))
@@ -74,10 +74,10 @@ enddef
 
 
 def s:make_title(filtered_lines: list<string>): string
-	var t = t:dig_params['type']
 	var lines = t:dig_params['lines']
 	var rootdir = t:dig_params['rootdir']
 	var search_text = t:dig_params['search_text']
+	var t = (INPUT_MODE_MENU != t:dig_params['input_mode']) ? t:dig_params['input_mode'] : t:dig_params['type']
 	var c = empty(search_text) ? len(lines) : printf('%d/%d', len(filtered_lines), len(lines))
 	var s = empty(rootdir) ? '' : utils.FixPath(fnamemodify(rootdir, ':~'))
 	return printf('%s(%s): %s ', t, c, s)
@@ -89,10 +89,17 @@ def s:set_filtered_lines(winid: number)
 	if !empty(t:dig_params['search_text'])
 		var pattern = ''
 		for c in split(t:dig_params['search_text'], '\zs')
-			pattern = pattern .. printf('\%%x%02x', char2nr(c))
+			if (char2nr('A') <= char2nr(c)) && (char2nr(c) <= char2nr('Z'))
+				pattern = pattern .. printf('\%(\%%x%02x\|\%%x%02x\)', char2nr(c), char2nr(c) + 0x20)
+			elseif (char2nr('a') <= char2nr(c)) && (char2nr(c) <= char2nr('z'))
+				pattern = pattern .. printf('\%(\%%x%02x\|\%%x%02x\)', char2nr(c), char2nr(c) - 0x20)
+			else
+				pattern = pattern .. printf('\%%x%02x', char2nr(c))
+			endif
 		endfor
 		for line in t:dig_params['lines']
-			if line =~# pattern
+			# ignorecase
+			if line =~? pattern
 				filtered_lines += [line]
 			endif
 		endfor
