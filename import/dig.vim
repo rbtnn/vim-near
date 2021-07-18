@@ -201,15 +201,11 @@ def s:common_filter(rootdir: string, winid: number, key: string): list<bool>
 			else
 				try
 					var lines: list<string> = git.Exec(fnamemodify(rootdir, ':p'), t:dig_params['gitdiff_text'])
-					if empty(lines)
-						utils.ErrorMsg('There are no modified files.')
-					else
-						t:dig_params['type'] = TYPE_DIFF
-						t:dig_params['rootdir'] = rootdir
-						t:dig_params['lines'] = lines
-						t:dig_params['lnum'] = 1
-						t:dig_params['search_text'] = ''
-					endif
+					t:dig_params['type'] = TYPE_DIFF
+					t:dig_params['rootdir'] = rootdir
+					t:dig_params['lines'] = lines
+					t:dig_params['lnum'] = 1
+					t:dig_params['search_text'] = ''
 				catch /^Vim:Interrupt$/
 					# nop
 				endtry
