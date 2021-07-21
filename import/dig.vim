@@ -92,7 +92,7 @@ def s:set_filtered_lines(winid: number)
 	var n: number = 1
 	clearmatches(winid)
 	var pattern: string = t:dig_params['search_text']
-	deletebufline(winbufnr(winid), 1, line('$', winid))
+	silent! call deletebufline(winbufnr(winid), 1, line('$', winid))
 	try
 		for line in t:dig_params['lines']
 			if (line =~? pattern) || empty(t:dig_params['search_text'])
