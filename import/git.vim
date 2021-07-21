@@ -59,6 +59,15 @@ export def ExecLs(path: string, input: string): list<string>
 	endif
 enddef
 
+export def ExecGrep(path: string, input: string): list<string>
+	if isdirectory(path)
+		var cmd: list<string> = ['git', '--no-pager', 'grep', '-n', input]
+		return sys.SystemForGit(cmd, path, v:true)
+	else
+		return []
+	endif
+enddef
+
 export def ShowDiff(rootdir: string, lnum: number)
 	var toplevel: string = GetRootDir(rootdir)
 	var key: string = s:keys_caches[toplevel][(lnum - 1)]
