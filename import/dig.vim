@@ -33,13 +33,14 @@ export def OpenDigWindow(q_args: string, reuse_winid: number = -1, cursor_text: 
 				'padding': [1, 1, 1, 1],
 				'scrollbarhighlight': 'digScrollbar',
 				'thumbhighlight': 'digThumb',
-				'minwidth': &columns / 2,
-				'maxwidth': &columns / 2,
+				'minwidth': &columns / 3 * 2,
+				'maxwidth': &columns / 3 * 2,
 				'minheight': &lines / 3,
 				'maxheight': &lines / 3,
 			})
 		win_execute(winid, 'setfiletype dig')
 		win_execute(winid, 'setlocal wincolor=Normal')
+		win_execute(winid, 'setlocal wrap')
 	endif
 
 	if !empty(q_args) || empty(get(t:, 'dig_params', {}))
@@ -435,10 +436,9 @@ def s:gitgrep_callback(rootdir: string, winid: number, n: number)
 	var lines: list<string> = getbufline(winbufnr(winid), 1, '$')
 	if 0 < n
 		if !empty(lines[n - 1])
-			var toplevel: string = git.GetRootDir(rootdir)
 			var m: list<string> = matchlist(lines[n - 1], '^\(.\{-\}\):\(\d\+\):')
 			if !empty(m)
-				var path: string = toplevel .. '/' .. m[1]
+				var path: string = rootdir .. '/' .. m[1]
 				if filereadable(path)
 					try
 						utils.OpenFile(path, str2nr(m[2]))

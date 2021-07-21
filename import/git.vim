@@ -27,7 +27,7 @@ export def ExecDiff(path: string, input: string): list<string>
 					dict[key] = {
 							'additions': m[1],
 							'deletions': m[2],
-							'name': fnamemodify(key, ':t'),
+							'name': key,
 							'fullpath': s:expand2fullpath(toplevel .. '/' .. key),
 						}
 				endif
@@ -61,7 +61,7 @@ enddef
 
 export def ExecGrep(path: string, input: string): list<string>
 	if isdirectory(path)
-		var cmd: list<string> = ['git', '--no-pager', 'grep', '-n', input]
+		var cmd: list<string> = ['git', '--no-pager', 'grep', '-I', '--no-color', '-n', input]
 		return sys.SystemForGit(cmd, path, v:true)
 	else
 		return []
