@@ -12,7 +12,7 @@ var s:info_caches = get(s:, 'info_caches', {})
 var s:keys_caches = get(s:, 'keys_caches', {})
 var s:args_caches = get(s:, 'args_caches', {})
 
-export def Exec(path: string, input: string): list<string>
+export def ExecDiff(path: string, input: string): list<string>
 	var toplevel: string = GetRootDir(path)
 	if isdirectory(toplevel)
 		var args: list<string> = split(input, '\s\+')
@@ -44,6 +44,16 @@ export def Exec(path: string, input: string): list<string>
 		s:info_caches[toplevel] = dict
 		s:keys_caches[toplevel] = ks
 		return lines
+	else
+		return []
+	endif
+enddef
+
+export def ExecLs(path: string, input: string): list<string>
+	if isdirectory(path)
+		var args: list<string> = split(input, '\s\+')
+		var cmd: list<string> = ['git', '--no-pager', 'ls'] + args
+		return sys.SystemForGit(cmd, path, v:true)
 	else
 		return []
 	endif

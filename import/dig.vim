@@ -9,7 +9,8 @@ import * as utils from './utils.vim'
 
 const FOLDER_ICON = '📁'
 const TYPE_FILE = 'file'
-const TYPE_DIFF = 'diff'
+const TYPE_GITDIFF = 'git-diff'
+const TYPE_GITLS = 'git-ls'
 const INPUT_MODE_MENU = 'menu'
 const INPUT_MODE_SEARCH = 'search'
 const INPUT_MODE_GITDIFF = 'gitdiff'
@@ -73,45 +74,36 @@ enddef
 
 
 
-def s:make_title(filtered_lines: list<string>): string
+def s:make_title(n: number): string
 	var lines = t:dig_params['lines']
 	var rootdir = t:dig_params['rootdir']
 	var search_text = t:dig_params['search_text']
 	var t = (INPUT_MODE_MENU != t:dig_params['input_mode']) ? t:dig_params['input_mode'] : t:dig_params['type']
-	var c = empty(search_text) ? len(lines) : printf('%d/%d', len(filtered_lines), len(lines))
+	var c = empty(search_text) ? len(lines) : printf('%d/%d', n, len(lines))
 	var s = empty(rootdir) ? '' : utils.FixPath(fnamemodify(rootdir, ':~'))
 	return printf('%s(%s): %s ', t, c, s)
 enddef
 
 def s:set_filtered_lines(winid: number)
-	var filtered_lines: list<string>
+	var n: number = 1
 	clearmatches(winid)
-	if !empty(t:dig_params['search_text'])
-		var pattern = ''
-		for c in split(t:dig_params['search_text'], '\zs')
-			if (char2nr('A') <= char2nr(c)) && (char2nr(c) <= char2nr('Z'))
-				pattern = pattern .. printf('\%(\%%x%02x\|\%%x%02x\)', char2nr(c), char2nr(c) + 0x20)
-			elseif (char2nr('a') <= char2nr(c)) && (char2nr(c) <= char2nr('z'))
-				pattern = pattern .. printf('\%(\%%x%02x\|\%%x%02x\)', char2nr(c), char2nr(c) - 0x20)
-			else
-				pattern = pattern .. printf('\%%x%02x', char2nr(c))
-			endif
-		endfor
+	var pattern: string = t:dig_params['search_text']
+	deletebufline(winbufnr(winid), 1, line('$', winid))
+	try
 		for line in t:dig_params['lines']
-			# ignorecase
-			if line =~? pattern
-				filtered_lines += [line]
+			if (line =~? pattern) || empty(t:dig_params['search_text'])
+				setbufline(winbufnr(winid), n, line)
+				n += 1
 			endif
 		endfor
-		popup_settext(winid, filtered_lines)
-		s:set_lnum(winid, 1)
-		win_execute(winid, printf("matchadd('Search', %s)", string(pattern)))
-	else
-		popup_settext(winid, t:dig_params['lines'])
-		s:set_lnum(winid, t:dig_params['lnum'])
-		win_execute(winid, 'redraw')
-	endif
-	popup_setoptions(winid, { 'title': s:make_title(filtered_lines), })
+		if !empty(t:dig_params['search_text'])
+			win_execute(winid, printf("matchadd('Search', %s)", string(pattern)))
+		endif
+	catch
+	endtry
+	s:set_lnum(winid, t:dig_params['lnum'])
+	win_execute(winid, 'redraw')
+	popup_setoptions(winid, { 'title': s:make_title(n - 1), })
 enddef
 
 def s:set_searchwin(winid: number)
@@ -142,19 +134,24 @@ def s:set_searchwin(winid: number)
 enddef
 
 def s:redraw(winid: number)
-	s:set_filtered_lines(winid)
 	if t:dig_params['type'] == TYPE_FILE
 		popup_setoptions(winid, {
 				'filter': function('s:file_filter', [(t:dig_params['rootdir'])]),
 				'callback': function('s:file_callback', [(t:dig_params['rootdir'])]),
 			})
+	elseif t:dig_params['type'] == TYPE_GITLS
+		popup_setoptions(winid, {
+				'filter': function('s:gitls_filter', [(t:dig_params['rootdir'])]),
+				'callback': function('s:gitls_callback', [(t:dig_params['rootdir'])]),
+			})
 	else
 		popup_setoptions(winid, {
-				'filter': function('s:diff_filter', [(t:dig_params['rootdir'])]),
-				'callback': function('s:diff_callback', [(t:dig_params['rootdir'])]),
+				'filter': function('s:gitdiff_filter', [(t:dig_params['rootdir'])]),
+				'callback': function('s:gitdiff_callback', [(t:dig_params['rootdir'])]),
 			})
 	endif
 	s:set_searchwin(winid)
+	s:set_filtered_lines(winid)
 enddef
 
 def s:set_lnum(winid: number, lnum: number)
@@ -200,8 +197,8 @@ def s:common_filter(rootdir: string, winid: number, key: string): list<bool>
 				utils.ErrorMsg('Current directory is not a git repository.')
 			else
 				try
-					var lines: list<string> = git.Exec(fnamemodify(rootdir, ':p'), t:dig_params['gitdiff_text'])
-					t:dig_params['type'] = TYPE_DIFF
+					var lines: list<string> = git.ExecDiff(fnamemodify(rootdir, ':p'), t:dig_params['gitdiff_text'])
+					t:dig_params['type'] = TYPE_GITDIFF
 					t:dig_params['rootdir'] = rootdir
 					t:dig_params['lines'] = lines
 					t:dig_params['lnum'] = 1
@@ -247,6 +244,27 @@ def s:file_filter(rootdir: string, winid: number, key: string): bool
 	else
 		if char2nr('d') == char2nr(key)
 			t:dig_params['input_mode'] = INPUT_MODE_GITDIFF
+			s:redraw(winid)
+			return v:true
+
+		elseif char2nr('f') == char2nr(key)
+			var toplevel: string = git.GetRootDir(rootdir)
+			if !executable('git')
+				utils.ErrorMsg('git is not executable.')
+			elseif empty(toplevel)
+				utils.ErrorMsg('Current directory is not a git repository.')
+			else
+				try
+					var lines: list<string> = git.ExecLs(toplevel, '')
+					t:dig_params['type'] = TYPE_GITLS
+					t:dig_params['rootdir'] = rootdir
+					t:dig_params['lines'] = lines
+					t:dig_params['lnum'] = 1
+					t:dig_params['search_text'] = ''
+				catch /^Vim:Interrupt$/
+					# nop
+				endtry
+			endif
 			s:redraw(winid)
 			return v:true
 
@@ -304,7 +322,7 @@ def s:file_filter(rootdir: string, winid: number, key: string): bool
 	endif
 enddef
 
-def s:diff_filter(rootdir: string, winid: number, key: string): bool
+def s:gitdiff_filter(rootdir: string, winid: number, key: string): bool
 	t:dig_params['lnum'] = line('.', winid)
 	var m = s:common_filter(rootdir, winid, key)
 	if !empty(m)
@@ -320,11 +338,27 @@ def s:diff_filter(rootdir: string, winid: number, key: string): bool
 	endif
 enddef
 
-def s:file_callback(rootdir: string, winid: number, lnum: number)
+def s:gitls_filter(rootdir: string, winid: number, key: string): bool
+	t:dig_params['lnum'] = line('.', winid)
+	var m = s:common_filter(rootdir, winid, key)
+	if !empty(m)
+		return m[0]
+	else
+		if char2nr('h') == char2nr(key)
+			OpenDigWindow(rootdir, winid)
+			return v:true
+
+		else
+			return popup_filter_menu(winid, key)
+		endif
+	endif
+enddef
+
+def s:file_callback(rootdir: string, winid: number, n: number)
 	var lines: list<string> = getbufline(winbufnr(winid), 1, '$')
-	if 0 < lnum
-		if !empty(lines[lnum - 1])
-			var line: string = substitute(lines[lnum - 1], '^' .. FOLDER_ICON, '', '')
+	if 0 < n
+		if !empty(lines[n - 1])
+			var line: string = substitute(lines[n - 1], '^' .. FOLDER_ICON, '', '')
 			var path: string = (empty(rootdir) ? '' : rootdir .. '/') .. line
 			if isdirectory(path)
 				OpenDigWindow(path)
@@ -340,11 +374,29 @@ def s:file_callback(rootdir: string, winid: number, lnum: number)
 	popup_close(get(t:dig_params, 'input_winid', -1))
 enddef
 
-def s:diff_callback(rootdir: string, winid: number, lnum: number)
+def s:gitdiff_callback(rootdir: string, winid: number, n: number)
 	var lines: list<string> = getbufline(winbufnr(winid), 1, '$')
-	if 0 < lnum
-		if !empty(lines[lnum - 1])
-			git.ShowDiff(rootdir, lnum)
+	if 0 < n
+		if !empty(lines[n - 1])
+			git.ShowDiff(rootdir, n)
+		endif
+	endif
+enddef
+
+def s:gitls_callback(rootdir: string, winid: number, n: number)
+	var lines: list<string> = getbufline(winbufnr(winid), 1, '$')
+	if 0 < n
+		if !empty(lines[n - 1])
+			var toplevel: string = git.GetRootDir(rootdir)
+			var line: string = substitute(lines[n - 1], '^' .. FOLDER_ICON, '', '')
+			var path: string = (empty(toplevel) ? '' : toplevel .. '/') .. line
+			if filereadable(path)
+				try
+					utils.OpenFile(path, -1)
+				catch
+					utils.ErrorMsg(v:exception)
+				endtry
+			endif
 		endif
 	endif
 enddef
