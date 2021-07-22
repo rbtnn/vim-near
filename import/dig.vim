@@ -209,6 +209,7 @@ def s:common_filter(rootdir: string, winid: number, key: string): list<bool>
 	else
 		if char2nr('/') == char2nr(key)
 			t:dig_params['input_mode'] = INPUT_MODE_FILTER
+			t:dig_params['lnum'] = 1
 			s:redraw(winid)
 			return [(v:true)]
 
@@ -270,6 +271,10 @@ def s:file_filter(rootdir: string, winid: number, key: string): bool
 
 		elseif char2nr('~') == char2nr(key)
 			OpenDigWindow('~', winid)
+			return v:true
+
+		elseif char2nr('%') == char2nr(key)
+			OpenDigWindow(expand('%:h'), winid)
 			return v:true
 
 		elseif char2nr('r') == char2nr(key)
