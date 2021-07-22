@@ -49,10 +49,9 @@ export def ExecDiff(path: string, input: string): list<string>
 	endif
 enddef
 
-export def ExecLs(path: string, input: string): list<string>
+export def ExecLs(path: string): list<string>
 	if isdirectory(path)
-		var args: list<string> = split(input, '\s\+')
-		var cmd: list<string> = ['git', '--no-pager', 'ls'] + args
+		var cmd: list<string> = ['git', '--no-pager', 'ls']
 		return sys.SystemForGit(cmd, path, v:true)
 	else
 		return []

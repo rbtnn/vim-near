@@ -12,10 +12,10 @@ const TYPE_FILE = 'file'
 const TYPE_GITDIFF = 'git-diff'
 const TYPE_GITLS = 'git-ls'
 const TYPE_GITGREP = 'git-grep'
-const INPUT_MODE_MENU = 'menu'
-const INPUT_MODE_SEARCH = 'search'
-const INPUT_MODE_GITDIFF = 'gitdiff'
-const INPUT_MODE_GITGREP = 'gitgrep'
+const INPUT_MODE_DEFAULT = 'default'
+const INPUT_MODE_FILTER = 'filter'
+const INPUT_MODE_GITDIFF = 'git-diff'
+const INPUT_MODE_GITGREP = 'git-grep'
 
 export def OpenDigWindow(q_args: string, reuse_winid: number = -1, cursor_text: string = '')
 	var rootdir: string = utils.FixPath(fnamemodify(expand(q_args), ':p'))
@@ -29,8 +29,8 @@ export def OpenDigWindow(q_args: string, reuse_winid: number = -1, cursor_text: 
 		winid = reuse_winid
 	else
 		winid = popup_menu([], {
-				'border': [1, 1, 1, 1],
-				'padding': [1, 1, 1, 1],
+				'border': [0, 0, 0, 0],
+				'padding': [2, 1, 1, 1],
 				'scrollbarhighlight': 'digScrollbar',
 				'thumbhighlight': 'digThumb',
 				'minwidth': &columns / 3 * 2,
@@ -39,7 +39,6 @@ export def OpenDigWindow(q_args: string, reuse_winid: number = -1, cursor_text: 
 				'maxheight': &lines / 3,
 			})
 		win_execute(winid, 'setfiletype dig')
-		win_execute(winid, 'setlocal wincolor=Normal')
 		win_execute(winid, 'setlocal wrap')
 	endif
 
@@ -49,8 +48,7 @@ export def OpenDigWindow(q_args: string, reuse_winid: number = -1, cursor_text: 
 			'type': TYPE_FILE,
 			'lnum': 1,
 			'lines': [],
-			'input_mode': INPUT_MODE_MENU,
-			'input_winid': -1,
+			'input_mode': INPUT_MODE_DEFAULT,
 			'search_text': '',
 			'gitdiff_text': '',
 			'gitgrep_text': '',
@@ -78,85 +76,54 @@ enddef
 
 
 
-def s:make_title(n: number): string
+def s:redraw(winid: number)
+	var d: dict<list<string>>
+	var n: number = 1
+	var type = t:dig_params['type']
 	var lines = t:dig_params['lines']
 	var rootdir = t:dig_params['rootdir']
 	var search_text = t:dig_params['search_text']
-	var t = (INPUT_MODE_MENU != t:dig_params['input_mode']) ? t:dig_params['input_mode'] : t:dig_params['type']
-	var c = empty(search_text) ? len(lines) : printf('%d/%d', n, len(lines))
-	var s = empty(rootdir) ? '' : utils.FixPath(fnamemodify(rootdir, ':~'))
-	return printf('%s(%s): %s ', t, c, s)
-enddef
+	var input_mode = t:dig_params['input_mode']
 
-def s:set_filtered_lines(winid: number)
-	var n: number = 1
+	d[TYPE_FILE] = ['s:file_filter', 's:file_callback']
+	d[TYPE_GITLS] = ['s:gitls_filter', 's:gitls_callback']
+	d[TYPE_GITGREP] = ['s:gitgrep_filter', 's:gitgrep_callback']
+	d[TYPE_GITDIFF] = ['s:gitdiff_filter', 's:gitdiff_callback']
+
+	popup_setoptions(winid, {
+			'filter': function(d[type][0], [rootdir]),
+			'callback': function(d[type][1], [rootdir]),
+		})
+
 	clearmatches(winid)
-	var pattern: string = t:dig_params['search_text']
 	silent! call deletebufline(winbufnr(winid), 1, line('$', winid))
 	try
-		for line in t:dig_params['lines']
-			if (line =~? pattern) || empty(t:dig_params['search_text'])
+		for line in lines
+			if (line =~? search_text) || empty(search_text)
 				setbufline(winbufnr(winid), n, line)
 				n += 1
 			endif
 		endfor
-		if !empty(t:dig_params['search_text'])
-			win_execute(winid, printf("matchadd('Search', %s)", string(pattern)))
+		if !empty(search_text)
+			win_execute(winid, printf("matchadd('Search', %s)", string((&ignorecase ? '\c' : '') .. search_text)))
 		endif
 	catch
 	endtry
+
 	s:set_lnum(winid, t:dig_params['lnum'])
 	win_execute(winid, 'redraw')
-	popup_setoptions(winid, { 'title': s:make_title(n - 1), })
-enddef
-
-def s:set_searchwin(winid: number)
-	popup_close(t:dig_params['input_winid'])
-	if INPUT_MODE_SEARCH == t:dig_params['input_mode']
-		t:dig_params['input_winid'] = popup_create('/' .. t:dig_params['search_text'], {})
-	elseif INPUT_MODE_GITDIFF == t:dig_params['input_mode']
-		t:dig_params['input_winid'] = popup_create('>' .. t:dig_params['gitdiff_text'], {})
-	elseif INPUT_MODE_GITGREP == t:dig_params['input_mode']
-		t:dig_params['input_winid'] = popup_create('>' .. t:dig_params['gitgrep_text'], {})
+	if INPUT_MODE_FILTER == input_mode
+		popup_setoptions(winid, { 'title': (input_mode .. '>' .. search_text), })
+	elseif INPUT_MODE_GITDIFF == input_mode
+		popup_setoptions(winid, { 'title': (input_mode .. '>' .. t:dig_params['gitdiff_text']), })
+	elseif INPUT_MODE_GITGREP == input_mode
+		popup_setoptions(winid, { 'title': (input_mode .. '>' .. t:dig_params['gitgrep_text']), })
 	else
-		t:dig_params['input_winid'] = -1
+		var t = (INPUT_MODE_DEFAULT != input_mode) ? input_mode : type
+		var c = empty(search_text) ? len(lines) : printf('%d/%d', n - 1, len(lines))
+		var s = empty(rootdir) ? '' : utils.FixPath(fnamemodify(rootdir, ':~'))
+		popup_setoptions(winid, { 'title': printf('%s(%s): %s ', t, c, s), })
 	endif
-	if INPUT_MODE_MENU != t:dig_params['input_mode']
-		var info = popup_getpos(winid)
-		popup_setoptions(t:dig_params['input_winid'], {
-			'pos': 'topleft',
-			'line': info['line'] + 1,
-			'col': info['col'] + 2,
-			'zindex': 9999,
-			'highlight': 'Directory',
-			})
-	endif
-enddef
-
-def s:redraw(winid: number)
-	if t:dig_params['type'] == TYPE_FILE
-		popup_setoptions(winid, {
-				'filter': function('s:file_filter', [(t:dig_params['rootdir'])]),
-				'callback': function('s:file_callback', [(t:dig_params['rootdir'])]),
-			})
-	elseif t:dig_params['type'] == TYPE_GITLS
-		popup_setoptions(winid, {
-				'filter': function('s:gitls_filter', [(t:dig_params['rootdir'])]),
-				'callback': function('s:gitls_callback', [(t:dig_params['rootdir'])]),
-			})
-	elseif t:dig_params['type'] == TYPE_GITGREP
-		popup_setoptions(winid, {
-				'filter': function('s:gitgrep_filter', [(t:dig_params['rootdir'])]),
-				'callback': function('s:gitgrep_callback', [(t:dig_params['rootdir'])]),
-			})
-	else
-		popup_setoptions(winid, {
-				'filter': function('s:gitdiff_filter', [(t:dig_params['rootdir'])]),
-				'callback': function('s:gitdiff_callback', [(t:dig_params['rootdir'])]),
-			})
-	endif
-	s:set_searchwin(winid)
-	s:set_filtered_lines(winid)
 enddef
 
 def s:set_lnum(winid: number, lnum: number)
@@ -168,7 +135,7 @@ def s:input_common_filter(winid: number, key: string, key_mode: string, key_text
 		return [popup_filter_menu(winid, "\<Esc>")]
 	elseif 0x08 == char2nr(key) # Ctrl-h
 		if empty(t:dig_params[key_text])
-			t:dig_params[key_mode] = INPUT_MODE_MENU
+			t:dig_params[key_mode] = INPUT_MODE_DEFAULT
 			t:dig_params[key_text] = ''
 		else
 			t:dig_params[key_text] = join(split(t:dig_params[key_text], '\zs')[: -2], '')
@@ -195,7 +162,7 @@ def s:execute_git(rootdir: string, type: string)
 			elseif TYPE_GITDIFF == type
 				t:dig_params['lines'] = git.ExecDiff(fnamemodify(rootdir, ':p'), t:dig_params['gitdiff_text'])
 			elseif TYPE_GITLS == type
-				t:dig_params['lines'] = git.ExecLs(toplevel, '')
+				t:dig_params['lines'] = git.ExecLs(toplevel)
 			else
 				t:dig_params['lines'] = []
 			endif
@@ -210,9 +177,9 @@ def s:execute_git(rootdir: string, type: string)
 enddef
 
 def s:common_filter(rootdir: string, winid: number, key: string): list<bool>
-	if INPUT_MODE_SEARCH == t:dig_params['input_mode']
+	if INPUT_MODE_FILTER == t:dig_params['input_mode']
 		if char2nr("\r") == char2nr(key)
-			t:dig_params['input_mode'] = INPUT_MODE_MENU
+			t:dig_params['input_mode'] = INPUT_MODE_DEFAULT
 			s:redraw(winid)
 			return [(v:true)]
 		else
@@ -221,7 +188,7 @@ def s:common_filter(rootdir: string, winid: number, key: string): list<bool>
 
 	elseif INPUT_MODE_GITGREP == t:dig_params['input_mode']
 		if char2nr("\r") == char2nr(key)
-			t:dig_params['input_mode'] = INPUT_MODE_MENU
+			t:dig_params['input_mode'] = INPUT_MODE_DEFAULT
 			s:execute_git(rootdir, TYPE_GITGREP)
 			s:redraw(winid)
 			return [(v:true)]
@@ -231,7 +198,7 @@ def s:common_filter(rootdir: string, winid: number, key: string): list<bool>
 
 	elseif INPUT_MODE_GITDIFF == t:dig_params['input_mode']
 		if char2nr("\r") == char2nr(key)
-			t:dig_params['input_mode'] = INPUT_MODE_MENU
+			t:dig_params['input_mode'] = INPUT_MODE_DEFAULT
 			s:execute_git(rootdir, TYPE_GITDIFF)
 			s:redraw(winid)
 			return [(v:true)]
@@ -241,7 +208,7 @@ def s:common_filter(rootdir: string, winid: number, key: string): list<bool>
 
 	else
 		if char2nr('/') == char2nr(key)
-			t:dig_params['input_mode'] = INPUT_MODE_SEARCH
+			t:dig_params['input_mode'] = INPUT_MODE_FILTER
 			s:redraw(winid)
 			return [(v:true)]
 
@@ -252,6 +219,9 @@ def s:common_filter(rootdir: string, winid: number, key: string): list<bool>
 		elseif char2nr('G') == char2nr(key)
 			s:set_lnum(winid, line('$', winid))
 			return [(v:true)]
+
+		elseif char2nr('q') == char2nr(key)
+			return [popup_filter_menu(winid, "\<esc>")]
 
 		elseif char2nr('l') == char2nr(key)
 			return [popup_filter_menu(winid, "\<cr>")]
@@ -402,7 +372,6 @@ def s:file_callback(rootdir: string, winid: number, n: number)
 			endif
 		endif
 	endif
-	popup_close(get(t:dig_params, 'input_winid', -1))
 enddef
 
 def s:gitdiff_callback(rootdir: string, winid: number, n: number)
